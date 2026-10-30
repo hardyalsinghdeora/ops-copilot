@@ -1,0 +1,154 @@
+[
+  {
+    "id": "q01",
+    "question": "payments is slow, what do I check first?",
+    "expected_doc_ids": [
+      "rb-payments-p99-latency-spike"
+    ],
+    "reference_answer": "Check whether there was a payments-api deployment in the last two hours (argocd app history payments-api-prod or the deploy markers on Payments API — Overview) and roll it back first if so; then check the database pool on Payments API — Database Pool (payments_api_db_pool_waiting_count above 5 means saturation), then PayGate latency, Postgres, and traffic.",
+    "category": "runbook"
+  },
+  {
+    "id": "q02",
+    "question": "How do I rotate the payments-api database credentials without downtime?",
+    "expected_doc_ids": [
+      "rb-payments-db-credential-rotation"
+    ],
+    "reference_answer": "Stage the new password in Vault, create a sibling role payments_app_next (IN ROLE payments_app_rw) for a 15-minute overlap, update the payments-api-db-credentials Kubernetes secret and rollout-restart the deployment, verify no 'password authentication failed' log lines, then set the old role NOLOGIN after 15 minutes.",
+    "category": "runbook"
+  },
+  {
+    "id": "q03",
+    "question": "After I run argocd app rollback, why does the bad version come back a few minutes later and how do I stop it?",
+    "expected_doc_ids": [
+      "rb-platform-argocd-rollback",
+      "pm-2026-08-19-payments-latency-pool-change"
+    ],
+    "reference_answer": "Auto-sync with self-heal re-deploys git HEAD within about 3 minutes after a rollback, so you must run 'argocd app set <app> --sync-policy none' after rolling back; this re-triggered the 2026-08-19 payments latency incident and is now part of the runbook (NAV-4823).",
+    "category": "runbook"
+  },
+  {
+    "id": "q04",
+    "question": "What is the difference between SEV1 and SEV2 at Navigator, and how often do we update the status page for each?",
+    "expected_doc_ids": [
+      "rb-platform-oncall-handbook"
+    ],
+    "reference_answer": "SEV1 means the platform is unusable for most students or teachers or there is data loss or a security breach, with a 5-minute acknowledge and status-page updates within 15 minutes then every 30 minutes; SEV2 is a core flow degraded for a significant share of users or an SLO burning fast, with a 15-minute acknowledge and status-page updates within 30 minutes then every 60 minutes.",
+    "category": "runbook"
+  },
+  {
+    "id": "q05",
+    "question": "Kafka lag on the assessment scorer is climbing during an exam. Scaling to more pods isn't helping — why, and what should I do instead?",
+    "expected_doc_ids": [
+      "rb-assessment-kafka-consumer-lag",
+      "pm-2026-09-22-assessment-consumer-lag-exam-peak"
+    ],
+    "reference_answer": "The assessment.responses.v2 topic has 48 partitions, so more than 48 total scorer threads (12 pods × 4 threads by default) adds nothing; scale to 24 replicas at most, raise SCORER_MAX_POLL_RECORDS to 500, and check whether Postgres writes (assessment_engine_db_write_duration_seconds) or the nightly ETL are the bottleneck.",
+    "category": "runbook"
+  },
+  {
+    "id": "q06",
+    "question": "Which services verify auth-service JWTs locally, and how long do they cache the JWKS?",
+    "expected_doc_ids": [
+      "svc-auth-service",
+      "adr-002-jwt-refresh-tokens-redis"
+    ],
+    "reference_answer": "payments-api, assessment-engine, content-cms and notification-worker verify tokens locally against /.well-known/jwks.json and cache the JWKS for 300 seconds (JWKS_CACHE_TTL_SECONDS=300), so an old signing key must stay in the JWKS at least that long after a rotation.",
+    "category": "service"
+  },
+  {
+    "id": "q07",
+    "question": "Email bounce rate just spiked and OTPs are at risk. How do I stop the bleeding without dropping transactional email?",
+    "expected_doc_ids": [
+      "rb-notification-bounce-storm-celery-backlog"
+    ],
+    "reference_answer": "Pause only the bulk queue with 'celery -A notification_worker control cancel_consumer notify-bulk' so OTPs on notify-email keep flowing, confirm the MailRelay suppression callback is incrementing notification_mailrelay_callback_total, and if the sending identity is under review switch EMAIL_FROM_DOMAIN to the backup mail2.navigator.example.",
+    "category": "runbook"
+  },
+  {
+    "id": "q08",
+    "question": "The nightly ETL extract failed with 'canceling statement due to conflict with recovery'. What does that mean and how do I recover?",
+    "expected_doc_ids": [
+      "rb-reporting-replication-lag-etl-failure"
+    ],
+    "reference_answer": "The replica cancelled the query to apply WAL because of replication lag and max_standby_streaming_delay; wait until pg_replication_lag_seconds is under 60 and re-run the task with 'airflow tasks clear nav_warehouse_nightly -t extract_scores ...' or backfill the whole DAG for the date, which is idempotent via MERGE.",
+    "category": "runbook"
+  },
+  {
+    "id": "q09",
+    "question": "Why did we pick Kafka over synchronous scoring for assessment responses, and what new failure mode did that introduce?",
+    "expected_doc_ids": [
+      "adr-001-kafka-for-assessment-events"
+    ],
+    "reference_answer": "Synchronous scoring pushed request p99 above 3s at ~2,500 concurrent students, coupled students to Postgres hiccups, and left no replayable record; Kafka (48-partition assessment.responses.v2, 7-day retention) decoupled the write path and enabled replay, at the cost of consumer lag as a new, eventually-consistent failure mode.",
+    "category": "adr"
+  },
+  {
+    "id": "q10",
+    "question": "How long do access tokens and refresh tokens live, and where are refresh tokens stored?",
+    "expected_doc_ids": [
+      "adr-002-jwt-refresh-tokens-redis"
+    ],
+    "reference_answer": "Access tokens are RS256 JWTs valid for 15 minutes (AUTH_ACCESS_TOKEN_TTL_SECONDS=900); refresh tokens are opaque values stored hashed in Redis auth-sessions under sess:<user_id>:<session_id> with a 30-day TTL and rotated on every use.",
+    "category": "adr"
+  },
+  {
+    "id": "q11",
+    "question": "How is the PayGate idempotency key derived, and when is the attempt counter allowed to increment?",
+    "expected_doc_ids": [
+      "adr-003-idempotency-keys-paygate"
+    ],
+    "reference_answer": "The key is sha256(order_id + \":\" + attempt), where attempt is the server-side payments.orders.payment_attempt counter; it increments only when a user deliberately retries after a terminal payment.failed, never on a timeout or 5xx, and retries reuse the same key.",
+    "category": "adr"
+  },
+  {
+    "id": "q12",
+    "question": "What does ArgoCD auto-rollback actually check, and what kinds of regressions will it miss?",
+    "expected_doc_ids": [
+      "adr-005-blue-green-argocd-auto-rollback"
+    ],
+    "reference_answer": "The AnalysisTemplate nav-error-rate-slo aborts a rollout when the 5xx ratio on green pods exceeds 1% in 2 of 5 one-minute samples; it does not catch latency regressions, consumer lag, or data-correctness problems, and notification-worker has no analysis-based rollback at all.",
+    "category": "adr"
+  },
+  {
+    "id": "q13",
+    "question": "What was the root cause of the July 2026 auth outage and how long were users locked out?",
+    "expected_doc_ids": [
+      "pm-2026-07-03-auth-expired-signing-key"
+    ],
+    "reference_answer": "The active JWT signing key nav-2026-04 reached its 90-day expiry with no metric, alert, or rotation procedure in place, so every verifier rejected tokens with KeyExpired; authenticated traffic was effectively down for 112 minutes (05:30–07:22 IST) on 2026-07-03, a SEV1.",
+    "category": "postmortem"
+  },
+  {
+    "id": "q14",
+    "question": "How did we end up sending students the same push notification up to 11 times in June?",
+    "expected_doc_ids": [
+      "pm-2026-06-11-notification-duplicate-push"
+    ],
+    "reference_answer": "The dedupe Redis notify-dedupe was unavailable and the worker fails open, while a new release OOM-killed push workers mid-batch; with acks_late=true the already-sent tasks were re-queued and re-sent without an idempotency check, producing 412k duplicate pushes to about 61,000 students over 41 minutes.",
+    "category": "postmortem"
+  },
+  {
+    "id": "q15",
+    "question": "Who owns reporting-db, which rotation is paged for it, and what is its replication lag SLO?",
+    "expected_doc_ids": [
+      "svc-reporting-db"
+    ],
+    "reference_answer": "reporting-db is owned by Kabir Shah (secondary Sana Khan), paged through the nav-data-oncall rotation in #nav-data, and its replication lag SLO is 95% of minutes under 60 seconds, alerting via ReportingReplicaLagHigh at 300s.",
+    "category": "service"
+  },
+  {
+    "id": "neg01",
+    "question": "How do I configure the mobile app's offline mode for students?",
+    "expected_doc_ids": [],
+    "reference_answer": "The knowledge base does not cover the mobile app or an offline mode; the assistant should say so and point to the service owner rather than guess.",
+    "category": "negative"
+  },
+  {
+    "id": "neg02",
+    "question": "What is the Kubernetes node pool size for the staging cluster?",
+    "expected_doc_ids": [],
+    "reference_answer": "No document in the knowledge base states cluster or node pool sizing; the correct answer is that this is not covered.",
+    "category": "negative"
+  }
+]

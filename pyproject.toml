@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ops-copilot"
+version = "0.1.0"
+description = "Engineering Ops Copilot — a multi-agent RAG + MCP assistant for on-call engineers, built on Claude and LangGraph."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Hardyal Singh Deora" }]
+keywords = ["llm", "rag", "mcp", "langgraph", "multi-agent", "claude", "anthropic", "devops", "sre"]
+dependencies = [
+    "langgraph>=1.0",
+    "langchain-core>=1.0",
+    "langchain-anthropic>=1.0",
+    "langchain-mcp-adapters>=0.3",
+    "mcp>=1.20",
+    "chromadb>=1.0",
+    "rank-bm25>=0.2",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "typer>=0.12",
+    "rich>=13",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.5"]
+voyage = ["voyageai>=0.3"]
+
+[project.scripts]
+ops-copilot = "ops_copilot.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = ["slow: spawns MCP subprocesses"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]

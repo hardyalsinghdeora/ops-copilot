@@ -1,0 +1,233 @@
+[
+  {
+    "id": "payments-api",
+    "name": "Payments API",
+    "description": "Orders, PayGate card/UPI charges, webhooks, refunds and receipts for assessment packs and school subscriptions.",
+    "tech_stack": [
+      "Node.js 22",
+      "TypeScript",
+      "Fastify",
+      "node-postgres",
+      "Postgres 16",
+      "PayGate SDK"
+    ],
+    "repo": "navigator-payments-api",
+    "owner": "Priya Raman",
+    "oncall_rotation": "nav-payments-oncall",
+    "oncall_now": "Priya Raman",
+    "dependencies": [
+      "auth-service",
+      "notification-worker"
+    ],
+    "dependents": [
+      "notification-worker",
+      "reporting-db"
+    ],
+    "dashboards": [
+      "Payments API — Overview",
+      "Payments API — Database Pool",
+      "PayGate Webhooks"
+    ],
+    "slos": {
+      "availability": "99.9%",
+      "p99_latency_ms": 800
+    },
+    "runbook_ids": [
+      "rb-payments-p99-latency-spike",
+      "rb-paygate-webhook-failures-duplicate-charges",
+      "rb-payments-db-credential-rotation"
+    ],
+    "slack_channel": "#nav-payments"
+  },
+  {
+    "id": "auth-service",
+    "name": "Auth Service",
+    "description": "Identity provider: password and school-SSO login, 15-minute JWT access tokens, refresh tokens in Redis, JWKS endpoint.",
+    "tech_stack": [
+      "Python 3.12",
+      "FastAPI",
+      "PyJWT (RS256)",
+      "python3-saml",
+      "Redis",
+      "Postgres 16",
+      "Vault"
+    ],
+    "repo": "navigator-auth-service",
+    "owner": "Anita Rao",
+    "oncall_rotation": "nav-platform-oncall",
+    "oncall_now": "Anita Rao",
+    "dependencies": [
+      "notification-worker"
+    ],
+    "dependents": [
+      "payments-api",
+      "assessment-engine",
+      "content-cms",
+      "notification-worker"
+    ],
+    "dashboards": [
+      "Auth Service — Logins & Tokens",
+      "Auth Service — Redis Sessions"
+    ],
+    "slos": {
+      "availability": "99.95%",
+      "p99_latency_ms": 500
+    },
+    "runbook_ids": [
+      "rb-auth-login-failures-jwt-key-rotation",
+      "rb-auth-redis-session-memory-pressure"
+    ],
+    "slack_channel": "#nav-auth"
+  },
+  {
+    "id": "assessment-engine",
+    "name": "Assessment Engine",
+    "description": "Adaptive test delivery and scoring: response ingestion via Kafka, IRT-style ability scoring, scored events, teacher reports.",
+    "tech_stack": [
+      "Java 21",
+      "Spring Boot 3",
+      "Spring Kafka",
+      "Kafka",
+      "Avro",
+      "Postgres 16"
+    ],
+    "repo": "navigator-assessment-engine",
+    "owner": "Rohan Iyer",
+    "oncall_rotation": "nav-assessment-oncall",
+    "oncall_now": "Rohan Iyer",
+    "dependencies": [
+      "auth-service",
+      "content-cms",
+      "reporting-db"
+    ],
+    "dependents": [
+      "notification-worker",
+      "reporting-db"
+    ],
+    "dashboards": [
+      "Assessment Engine — Scoring Pipeline",
+      "Assessment Engine — Scoring Quality",
+      "Assessment Engine — API"
+    ],
+    "slos": {
+      "availability": "99.95%",
+      "p99_latency_ms": 300
+    },
+    "runbook_ids": [
+      "rb-assessment-kafka-consumer-lag",
+      "rb-assessment-scoring-mismatch"
+    ],
+    "slack_channel": "#nav-assessment"
+  },
+  {
+    "id": "content-cms",
+    "name": "Content CMS",
+    "description": "Item authoring, item-bank publishing, S3-backed media uploads, exam calendar and school report exports for editors and admins.",
+    "tech_stack": [
+      "Python 3.12",
+      "Django 5",
+      "Django REST Framework",
+      "django-storages",
+      "S3",
+      "Celery client",
+      "Postgres 16"
+    ],
+    "repo": "navigator-content-cms",
+    "owner": "Sana Khan",
+    "oncall_rotation": "nav-content-oncall",
+    "oncall_now": "Sana Khan",
+    "dependencies": [
+      "auth-service",
+      "notification-worker",
+      "reporting-db"
+    ],
+    "dependents": [
+      "assessment-engine"
+    ],
+    "dashboards": [
+      "Content CMS — Uploads & Errors",
+      "Content CMS — Publishing"
+    ],
+    "slos": {
+      "availability": "99.5%",
+      "p99_latency_ms": 1500
+    },
+    "runbook_ids": [
+      "rb-content-cms-s3-upload-failures"
+    ],
+    "slack_channel": "#nav-content"
+  },
+  {
+    "id": "notification-worker",
+    "name": "Notification Worker",
+    "description": "Celery workers for transactional and bulk email (MailRelay), FCM push, and content-cms media processing.",
+    "tech_stack": [
+      "Python 3.12",
+      "Celery 5",
+      "RabbitMQ",
+      "Redis",
+      "MailRelay",
+      "FCM",
+      "Postgres 16"
+    ],
+    "repo": "navigator-notification-worker",
+    "owner": "Kabir Shah",
+    "oncall_rotation": "nav-platform-oncall",
+    "oncall_now": "Anita Rao",
+    "dependencies": [
+      "payments-api",
+      "auth-service",
+      "assessment-engine"
+    ],
+    "dependents": [
+      "auth-service",
+      "payments-api",
+      "content-cms"
+    ],
+    "dashboards": [
+      "Notification Worker — Queues & Delivery"
+    ],
+    "slos": {
+      "availability": "99.5%",
+      "p99_latency_ms": 30000
+    },
+    "runbook_ids": [
+      "rb-notification-bounce-storm-celery-backlog"
+    ],
+    "slack_channel": "#nav-notifications"
+  },
+  {
+    "id": "reporting-db",
+    "name": "Reporting DB",
+    "description": "Postgres streaming read replica for teacher reports plus the nightly Airflow ETL into the nav-warehouse.",
+    "tech_stack": [
+      "Postgres 16 hot standby",
+      "Airflow 2",
+      "Terraform",
+      "nav-warehouse (columnar)"
+    ],
+    "repo": "navigator-warehouse-etl",
+    "owner": "Kabir Shah",
+    "oncall_rotation": "nav-data-oncall",
+    "oncall_now": "Kabir Shah",
+    "dependencies": [
+      "assessment-engine",
+      "payments-api"
+    ],
+    "dependents": [
+      "assessment-engine",
+      "content-cms"
+    ],
+    "dashboards": [
+      "Reporting DB — Replication & ETL"
+    ],
+    "slos": {
+      "availability": "99.9%",
+      "p99_latency_ms": 2000
+    },
+    "runbook_ids": [
+      "rb-reporting-replication-lag-etl-failure"
+    ],
+    "slack_channel": "#nav-data"
+  }
+]

@@ -1,0 +1,266 @@
+[
+  {
+    "id": "DEP-3310",
+    "service": "payments-api",
+    "version": "2.14.0",
+    "environment": "production",
+    "deployed_at": "2026-10-30T01:05:00+05:30",
+    "deployed_by": "Dev Mehta",
+    "commit_sha": "a3f9c21e",
+    "status": "succeeded",
+    "change_summary": "Release 2.14.0: UPI autopay mandates for subscriptions (NAV-4901), GST line fix on multi-pack receipts (NAV-4905). Pool tuning: DB_POOL_IDLE_TIMEOUT_MS 30000 -> 5000 and node-postgres connectionTimeoutMillis 10000 -> 2000 to recycle idle connections faster.",
+    "tickets": [
+      "NAV-4901",
+      "NAV-4905"
+    ]
+  },
+  {
+    "id": "DEP-3309",
+    "service": "notification-worker",
+    "version": "2.14.0",
+    "environment": "production",
+    "deployed_at": "2026-10-29T22:40:00+05:30",
+    "deployed_by": "Kabir Shah",
+    "commit_sha": "7be04d1c",
+    "status": "succeeded",
+    "change_summary": "Release 2.14.0: Celery 5.4 upgrade with kombu pinned (NAV-4925), homework-reminder digest mode (NAV-4928).",
+    "tickets": [
+      "NAV-4925",
+      "NAV-4928"
+    ]
+  },
+  {
+    "id": "DEP-3308",
+    "service": "assessment-engine",
+    "version": "2.14.0",
+    "environment": "production",
+    "deployed_at": "2026-10-29T16:20:00+05:30",
+    "deployed_by": "Rohan Iyer",
+    "commit_sha": "c17d2e90",
+    "status": "succeeded",
+    "change_summary": "Release 2.14.0: JDBC batch inserts in ScoreWriter.persist() (NAV-4875), skill-level breakdown in teacher live report (NAV-4915), DLQ messages tagged with source partition and offset (NAV-4918).",
+    "tickets": [
+      "NAV-4875",
+      "NAV-4915",
+      "NAV-4918"
+    ]
+  },
+  {
+    "id": "DEP-3307",
+    "service": "auth-service",
+    "version": "2.14.0",
+    "environment": "production",
+    "deployed_at": "2026-10-29T14:05:00+05:30",
+    "deployed_by": "Anita Rao",
+    "commit_sha": "5e2a8f73",
+    "status": "succeeded",
+    "change_summary": "Release 2.14.0: signer refuses keys expiring in < 24h and logs SigningKeyNearExpiry (NAV-4703), teacher 'view as student' impersonation audit trail (NAV-4910).",
+    "tickets": [
+      "NAV-4703",
+      "NAV-4910"
+    ]
+  },
+  {
+    "id": "DEP-3306",
+    "service": "payments-api",
+    "version": "2.13.5",
+    "environment": "production",
+    "deployed_at": "2026-10-29T11:30:00+05:30",
+    "deployed_by": "Priya Raman",
+    "commit_sha": "d94b16aa",
+    "status": "succeeded",
+    "change_summary": "Hotfix: paygate:replay admin command accepts --to timestamps without seconds; no runtime behaviour change.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3305",
+    "service": "assessment-engine",
+    "version": "2.13.7",
+    "environment": "production",
+    "deployed_at": "2026-10-28T19:15:00+05:30",
+    "deployed_by": "Dev Mehta",
+    "commit_sha": "0f6c3b58",
+    "status": "succeeded",
+    "change_summary": "Raise SCORER_MAX_POLL_RECORDS default 200 -> 300; log item_bank_version at attempt start for scoring-mismatch triage.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3304",
+    "service": "notification-worker",
+    "version": "2.13.4",
+    "environment": "production",
+    "deployed_at": "2026-10-28T17:50:00+05:30",
+    "deployed_by": "Sana Khan",
+    "commit_sha": "e8a1d47f",
+    "status": "succeeded",
+    "change_summary": "MailRelay callback handler: accept new 'suppressed' event type instead of logging it as unknown.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3303",
+    "service": "auth-service",
+    "version": "2.13.3",
+    "environment": "production",
+    "deployed_at": "2026-10-28T15:10:00+05:30",
+    "deployed_by": "Kabir Shah",
+    "commit_sha": "2c9e7a05",
+    "status": "succeeded",
+    "change_summary": "Cap cardinality of client_ip label on auth_login_attempts_total (top 500 IPs, rest bucketed as 'other').",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3302",
+    "service": "payments-api",
+    "version": "2.13.4",
+    "environment": "production",
+    "deployed_at": "2026-10-28T12:45:00+05:30",
+    "deployed_by": "Dev Mehta",
+    "commit_sha": "91f4e6b2",
+    "status": "succeeded",
+    "change_summary": "Add reason='unknown_event_type' to payments_api_webhook_events_total; return 200 for unknown PayGate event types.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3301",
+    "service": "content-cms",
+    "version": "2.14.0",
+    "environment": "production",
+    "deployed_at": "2026-10-28T10:30:00+05:30",
+    "deployed_by": "Sana Khan",
+    "commit_sha": "b6d03c9e",
+    "status": "succeeded",
+    "change_summary": "Release 2.14.0 (retry of DEP-3296): CSV bulk item import with validation preview (NAV-4921), client-side guard for uploads above MEDIA_MAX_UPLOAD_MB (NAV-4932), fix for 5xx in /admin/reports/export (NAV-4945).",
+    "tickets": [
+      "NAV-4921",
+      "NAV-4932",
+      "NAV-4945"
+    ]
+  },
+  {
+    "id": "DEP-3300",
+    "service": "reporting-db",
+    "version": "etl-1.22.0",
+    "environment": "production",
+    "deployed_at": "2026-10-28T09:00:00+05:30",
+    "deployed_by": "Kabir Shah",
+    "commit_sha": "48c7f0d3",
+    "status": "succeeded",
+    "change_summary": "ETL: add schools_dim refresh task; MERGE on charge_id now covers refunds so warehouse.charges reflects refund status.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3299",
+    "service": "notification-worker",
+    "version": "2.13.3",
+    "environment": "production",
+    "deployed_at": "2026-10-27T16:30:00+05:30",
+    "deployed_by": "Kabir Shah",
+    "commit_sha": "f21a9c6d",
+    "status": "failed",
+    "change_summary": "Pin kombu 5.4.2 ahead of Celery upgrade — post-sync 'celery inspect ping' failed (ImportError in kombu.transport.pyamqp); sync blocked, previous version kept.",
+    "tickets": [
+      "NAV-4925"
+    ]
+  },
+  {
+    "id": "DEP-3298",
+    "service": "auth-service",
+    "version": "2.13.2",
+    "environment": "production",
+    "deployed_at": "2026-10-27T14:00:00+05:30",
+    "deployed_by": "Anita Rao",
+    "commit_sha": "6a0d5e81",
+    "status": "succeeded",
+    "change_summary": "Config: WAF rule auth-login-burst 100 -> 120 req/min/IP; AUTH_LOGIN_CAPTCHA_THRESHOLD 3 -> 5 after false positives at shared-IP schools.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3297",
+    "service": "payments-api",
+    "version": "2.13.3",
+    "environment": "production",
+    "deployed_at": "2026-10-27T12:10:00+05:30",
+    "deployed_by": "Priya Raman",
+    "commit_sha": "3d8b2f4c",
+    "status": "succeeded",
+    "change_summary": "PayGate SDK 4.2.1; plumb PAYGATE_CIRCUIT_BREAKER_ENABLED through LaunchBoard flag payments.paygate_breaker.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3296",
+    "service": "content-cms",
+    "version": "2.14.0",
+    "environment": "production",
+    "deployed_at": "2026-10-27T10:45:00+05:30",
+    "deployed_by": "Sana Khan",
+    "commit_sha": "ab52e7d9",
+    "status": "rolled_back",
+    "change_summary": "Release 2.14.0: CSV bulk item import (NAV-4921), oversize upload guard (NAV-4932). Aborted by AnalysisTemplate nav-error-rate-slo: 3.4% 5xx on /admin/reports/export (export view used a removed queryset helper).",
+    "tickets": [
+      "NAV-4921",
+      "NAV-4932"
+    ]
+  },
+  {
+    "id": "DEP-3295",
+    "service": "reporting-db",
+    "version": "etl-1.21.3",
+    "environment": "production",
+    "deployed_at": "2026-10-26T09:10:00+05:30",
+    "deployed_by": "Kabir Shah",
+    "commit_sha": "c0e94b17",
+    "status": "succeeded",
+    "change_summary": "ETL: add attempt_scores.superseded_by to extract_scores and warehouse DDL — fixes ColumnNotFound in load_warehouse (NAV-4790).",
+    "tickets": [
+      "NAV-4790"
+    ]
+  },
+  {
+    "id": "DEP-3294",
+    "service": "notification-worker",
+    "version": "2.13.2",
+    "environment": "production",
+    "deployed_at": "2026-10-25T13:30:00+05:30",
+    "deployed_by": "Sana Khan",
+    "commit_sha": "9e3f7a2b",
+    "status": "succeeded",
+    "change_summary": "Raise FCM_MAX_BATCH 250 -> 500; push worker CELERY_CONCURRENCY 12 -> 16.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3293",
+    "service": "assessment-engine",
+    "version": "2.13.6",
+    "environment": "production",
+    "deployed_at": "2026-10-24T11:20:00+05:30",
+    "deployed_by": "Rohan Iyer",
+    "commit_sha": "17b8d5ce",
+    "status": "succeeded",
+    "change_summary": "Responses API rejects client retries that carry a new response_seq for an already-stored (attempt_id, item_id); prevents double-scoring on timeout retries.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3292",
+    "service": "auth-service",
+    "version": "2.13.1",
+    "environment": "production",
+    "deployed_at": "2026-10-23T17:45:00+05:30",
+    "deployed_by": "Anita Rao",
+    "commit_sha": "4f1c6e38",
+    "status": "succeeded",
+    "change_summary": "Alembic: index on auth.audit_log(user_id, created_at); Cache-Control max-age=300 on /.well-known/jwks.json.",
+    "tickets": []
+  },
+  {
+    "id": "DEP-3291",
+    "service": "payments-api",
+    "version": "2.13.2",
+    "environment": "production",
+    "deployed_at": "2026-10-23T11:00:00+05:30",
+    "deployed_by": "Dev Mehta",
+    "commit_sha": "8c5a0d92",
+    "status": "succeeded",
+    "change_summary": "Receipt PDF rendering moved to notification-worker behind LaunchBoard flag payments.receipt_pdf_async (default off).",
+    "tickets": []
+  }
+]

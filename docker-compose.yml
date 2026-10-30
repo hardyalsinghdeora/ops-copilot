@@ -1,0 +1,9 @@
+services:
+  ops-copilot:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPS_COPILOT_EMBEDDING_PROVIDER=local
+    volumes:
+      - ./data/.drafts:/app/data/.drafts

@@ -1,0 +1,612 @@
+[
+  {
+    "key": "NAV-4947",
+    "type": "Incident",
+    "summary": "assessment-engine consumer lag during 2026-10-30 morning practice window",
+    "description": "AssessmentConsumerLagHigh (ALT-1045) firing since 08:35 IST; lag 83k and rising, scoring delay p95 48s. Scorer at 12 replicas; HPA at 14. Pre-exam autoscale (NAV-4877) not yet shipped. Track mitigation and decide whether to pre-scale manually for the 11:00 window.",
+    "status": "In Progress",
+    "priority": "High",
+    "service": "assessment-engine",
+    "assignee": "Rohan Iyer",
+    "reporter": "Rohan Iyer",
+    "created": "2026-10-30T08:41:00+05:30",
+    "updated": "2026-10-30T09:10:00+05:30",
+    "fix_version": "2.14.1",
+    "labels": [
+      "incident",
+      "kafka",
+      "consumer-lag"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4941",
+    "type": "Task",
+    "summary": "Revert or retune payments-api pool timeouts introduced in 2.14.0",
+    "description": "DEP-3310 lowered DB_POOL_IDLE_TIMEOUT_MS to 5000 and connectionTimeoutMillis to 2000. Under overnight renewal traffic the pool churns connections and requests fail fast with 'timeout exceeded when trying to connect'. Decide between rollback to 2.13.5 and a 2.14.1 with DB_POOL_IDLE_TIMEOUT_MS=30000 / connectionTimeoutMillis=10000.",
+    "status": "In Progress",
+    "priority": "Highest",
+    "service": "payments-api",
+    "assignee": "Dev Mehta",
+    "reporter": "Priya Raman",
+    "created": "2026-10-30T02:35:00+05:30",
+    "updated": "2026-10-30T03:20:00+05:30",
+    "fix_version": "2.14.1",
+    "labels": [
+      "hotfix",
+      "connection-pool",
+      "latency"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4940",
+    "type": "Incident",
+    "summary": "payments-api p99 latency > 800ms since 2026-10-30 02:10 IST",
+    "description": "PaymentsApiP99LatencyHigh (ALT-1042) and PaymentsApiDbPoolSaturated (ALT-1043) firing. p99 1.94s, pool waiting count 14/pod. DEP-3310 (2.14.0) deployed 01:05 IST with pool/timeout changes is the prime suspect per rb-payments-p99-latency-spike. SEV2 declared; channel #inc-20261030-payments-latency.",
+    "status": "In Progress",
+    "priority": "Highest",
+    "service": "payments-api",
+    "assignee": "Priya Raman",
+    "reporter": "Priya Raman",
+    "created": "2026-10-30T02:22:00+05:30",
+    "updated": "2026-10-30T03:20:00+05:30",
+    "fix_version": "2.14.1",
+    "labels": [
+      "incident",
+      "sev2",
+      "latency",
+      "connection-pool"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4950",
+    "type": "Bug",
+    "summary": "Permanent bounces from greenfield-schools.example after their mail provider migration",
+    "description": "~1,100 permanent bounces in 15 minutes from one school district domain after they moved mail providers and enabled strict DMARC. Our suppression-list callback added all addresses; need a per-domain unsuppress once the district confirms SPF includes mail.navigator.example.",
+    "status": "In Review",
+    "priority": "Medium",
+    "service": "notification-worker",
+    "assignee": "Kabir Shah",
+    "reporter": "Sana Khan",
+    "created": "2026-10-28T11:30:00+05:30",
+    "updated": "2026-10-29T18:00:00+05:30",
+    "fix_version": "2.14.1",
+    "labels": [
+      "email",
+      "bounces",
+      "suppression"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4955",
+    "type": "Task",
+    "summary": "Add ReportingReplicaDown alert on missing pg_stat_replication row",
+    "description": "Replica disconnects currently surface only as lag once the replica reconnects. Alert when the primary has no pg_stat_replication row for navigator-replica-reporting for 2 minutes. Documented in svc-reporting-db; rule not yet in Alertmanager.",
+    "status": "To Do",
+    "priority": "Low",
+    "service": "reporting-db",
+    "assignee": "Kabir Shah",
+    "reporter": "Kabir Shah",
+    "created": "2026-10-26T10:00:00+05:30",
+    "updated": "2026-10-26T10:00:00+05:30",
+    "fix_version": null,
+    "labels": [
+      "alerting",
+      "replication"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4901",
+    "type": "Story",
+    "summary": "UPI autopay mandates for school subscription renewals",
+    "description": "Allow schools to set up a UPI autopay mandate via PayGate so annual subscriptions renew without a manual payment. Includes mandate creation, PayGate 'mandate.executed' webhook handling with event_id dedupe, and a renewal receipt via notification-worker.",
+    "status": "Done",
+    "priority": "High",
+    "service": "payments-api",
+    "assignee": "Dev Mehta",
+    "reporter": "Priya Raman",
+    "created": "2026-09-08T10:00:00+05:30",
+    "updated": "2026-10-29T18:30:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "feature",
+      "paygate",
+      "subscriptions"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4905",
+    "type": "Bug",
+    "summary": "Receipt PDF shows a single GST line for multi-pack orders",
+    "description": "Orders containing packs with different GST rates rendered one combined GST line, so school finance teams could not reconcile. Receipt now itemises GST per pack and totals match the PayGate charge amount to the paisa.",
+    "status": "Done",
+    "priority": "Medium",
+    "service": "payments-api",
+    "assignee": "Priya Raman",
+    "reporter": "Sana Khan",
+    "created": "2026-10-02T14:20:00+05:30",
+    "updated": "2026-10-28T12:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "bug",
+      "receipts",
+      "finance"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4703",
+    "type": "Story",
+    "summary": "auth-service refuses to sign with a key expiring within 24 hours",
+    "description": "Postmortem action from pm-2026-07-03-auth-expired-signing-key. The signer checks the active key's notAfter at startup and on every JWKS reload; if < 24h remain it logs SigningKeyNearExpiry at ERROR, fails readiness, and refuses to issue tokens so the failure is loud at the source instead of in verifiers.",
+    "status": "Done",
+    "priority": "High",
+    "service": "auth-service",
+    "assignee": "Anita Rao",
+    "reporter": "Anita Rao",
+    "created": "2026-07-08T11:00:00+05:30",
+    "updated": "2026-10-29T15:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "postmortem",
+      "jwt",
+      "reliability"
+    ],
+    "linked_incident": "pm-2026-07-03-auth-expired-signing-key"
+  },
+  {
+    "key": "NAV-4910",
+    "type": "Story",
+    "summary": "Audit trail for teacher 'view as student' impersonation",
+    "description": "Teachers can open a student's view to debug a stuck test. Every impersonation now writes an auth.audit_log row (teacher_id, student_id, reason, duration) and the impersonated access token carries an 'act' claim so downstream services can tag writes.",
+    "status": "Done",
+    "priority": "Medium",
+    "service": "auth-service",
+    "assignee": "Anita Rao",
+    "reporter": "Rohan Iyer",
+    "created": "2026-09-15T09:30:00+05:30",
+    "updated": "2026-10-29T15:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "feature",
+      "audit",
+      "security"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4875",
+    "type": "Task",
+    "summary": "Batch inserts in ScoreWriter.persist() (JDBC batch of 100)",
+    "description": "Postmortem action from pm-2026-09-22-assessment-consumer-lag-exam-peak. ScoreWriter wrote one row per statement; under exam load p95 write latency was 480ms and the scorer was I/O bound. Now accumulates up to 100 attempt_scores rows per poll and flushes in one JDBC batch inside a single transaction. Load test: 2,800 -> 7,900 msg/s at 48 threads.",
+    "status": "Done",
+    "priority": "Highest",
+    "service": "assessment-engine",
+    "assignee": "Rohan Iyer",
+    "reporter": "Rohan Iyer",
+    "created": "2026-09-24T10:00:00+05:30",
+    "updated": "2026-10-29T17:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "postmortem",
+      "performance",
+      "kafka",
+      "tech-debt"
+    ],
+    "linked_incident": "pm-2026-09-22-assessment-consumer-lag-exam-peak"
+  },
+  {
+    "key": "NAV-4915",
+    "type": "Story",
+    "summary": "Skill-level breakdown in the teacher live report",
+    "description": "The live results view (/api/reports/live) now groups attempt_scores by skill tag from the item bank and shows class mastery per skill alongside the overall scaled score. Reads from the replica via REPORTING_DB_URL with the existing 'data as of' indicator.",
+    "status": "Done",
+    "priority": "High",
+    "service": "assessment-engine",
+    "assignee": "Dev Mehta",
+    "reporter": "Rohan Iyer",
+    "created": "2026-09-01T12:00:00+05:30",
+    "updated": "2026-10-29T17:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "feature",
+      "reports",
+      "teachers"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4918",
+    "type": "Bug",
+    "summary": "DLQ messages lack source partition and offset headers",
+    "description": "Messages routed to assessment.responses.dlq by ErrorHandlingDeserializer did not carry the original partition/offset, making the 'skip a poison message' step in rb-assessment-kafka-consumer-lag guesswork. Now sets kafka_dlt-original-partition and kafka_dlt-original-offset headers and logs them.",
+    "status": "Done",
+    "priority": "Medium",
+    "service": "assessment-engine",
+    "assignee": "Rohan Iyer",
+    "reporter": "Dev Mehta",
+    "created": "2026-10-06T16:00:00+05:30",
+    "updated": "2026-10-29T17:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "bug",
+      "kafka",
+      "observability",
+      "tech-debt"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4921",
+    "type": "Story",
+    "summary": "Bulk item import from CSV with validation preview",
+    "description": "Content editors upload a CSV of items; the CMS validates (required fields, difficulty range, media references exist in navigator-prod-media) and shows a preview with per-row errors before anything is written. Import runs as a cms-media Celery task with progress in the admin UI.",
+    "status": "Done",
+    "priority": "High",
+    "service": "content-cms",
+    "assignee": "Sana Khan",
+    "reporter": "Sana Khan",
+    "created": "2026-09-10T11:00:00+05:30",
+    "updated": "2026-10-28T11:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "feature",
+      "import",
+      "editors"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4932",
+    "type": "Bug",
+    "summary": "Upload UI allows files above MEDIA_MAX_UPLOAD_MB and surfaces raw S3 EntityTooLarge",
+    "description": "The browser accepted a 700 MB video, requested a presign, and S3 returned EntityTooLarge which the UI showed verbatim. The upload component now reads MEDIA_MAX_UPLOAD_MB from /api/config and blocks oversize files with a clear message before presigning.",
+    "status": "Done",
+    "priority": "Low",
+    "service": "content-cms",
+    "assignee": "Sana Khan",
+    "reporter": "Rohan Iyer",
+    "created": "2026-08-25T15:00:00+05:30",
+    "updated": "2026-10-28T11:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "bug",
+      "uploads",
+      "ux"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4945",
+    "type": "Bug",
+    "summary": "/admin/reports/export returns 500 after queryset helper removal (DEP-3296 auto-rollback)",
+    "description": "2.14.0 removed ReportQuerySet.for_school() but the export view still called it, producing AttributeError 500s on green pods. nav-error-rate-slo analysis aborted DEP-3296 at 3.4% 5xx. Fixed by migrating the export view to the new filter API; added a smoke test hitting the export view in CI.",
+    "status": "Done",
+    "priority": "High",
+    "service": "content-cms",
+    "assignee": "Sana Khan",
+    "reporter": "Priya Raman",
+    "created": "2026-10-27T11:05:00+05:30",
+    "updated": "2026-10-28T10:45:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "bug",
+      "rollback",
+      "exports"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4925",
+    "type": "Task",
+    "summary": "Upgrade Celery 5.3 -> 5.4 and pin kombu",
+    "description": "Celery 5.3 is out of support and blocks the Python 3.13 move. Upgrade to 5.4, pin kombu 5.4.2, and add a startup self-check so a broken transport import fails the post-sync ping (as happened in DEP-3299) rather than silently idling.",
+    "status": "Done",
+    "priority": "Medium",
+    "service": "notification-worker",
+    "assignee": "Kabir Shah",
+    "reporter": "Kabir Shah",
+    "created": "2026-09-20T10:00:00+05:30",
+    "updated": "2026-10-29T23:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "tech-debt",
+      "dependencies",
+      "celery"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4928",
+    "type": "Story",
+    "summary": "Digest mode for homework reminder pushes",
+    "description": "Students with more than one homework due the same day received one push per assignment. notify-bulk now collapses them into a single daily digest push per student at 09:00 IST, cutting the weekday fan-out by ~40% and reducing the 09:00 notify-push backlog.",
+    "status": "Done",
+    "priority": "Medium",
+    "service": "notification-worker",
+    "assignee": "Sana Khan",
+    "reporter": "Kabir Shah",
+    "created": "2026-09-18T14:00:00+05:30",
+    "updated": "2026-10-29T23:00:00+05:30",
+    "fix_version": "2.14.0",
+    "labels": [
+      "feature",
+      "push",
+      "students"
+    ],
+    "linked_incident": null
+  },
+  {
+    "key": "NAV-4821",
+    "type": "Task",
+    "summary": "Add PaymentsApiDbPoolSaturated alert and pool panels",
+    "description": "Postmortem action from pm-2026-08-19-payments-latency-pool-change. Alert when avg payments_api_db_pool_waiting_count > 5 for 2 minutes (warning). Added pool active/size/waiting panels to Payments API — Database Pool and linked rb-payments-p99-latency-spike in the annotation.",
+    "status": "Done",
+    "priority": "High",
+    "service": "payments-api",
+    "assignee": "Priya Raman",
+    "reporter": "Priya Raman",
+    "created": "2026-08-21T10:00:00+05:30",
+    "updated": "2026-09-03T16:00:00+05:30",
+    "fix_version": "2.13.0",
+    "labels": [
+      "postmortem",
+      "alerting",
+      "connection-pool"
+    ],
+    "linked_incident": "pm-2026-08-19-payments-latency-pool-change"
+  },
+  {
+    "key": "NAV-4822",
+    "type": "Task",
+    "summary": "Extend AnalysisTemplate nav-error-rate-slo with a p99 latency check",
+    "description": "Postmortem action from pm-2026-08-19-payments-latency-pool-change. Auto-rollback only watches 5xx ratio; the August incident was a latency regression with client-side 504s. Add a second Prometheus metric to the AnalysisTemplate: p99 on green pods > service SLO for 2 of 5 samples aborts the rollout. Blocked on per-service SLO values being exposed as Rollout annotations.",
+    "status": "In Progress",
+    "priority": "High",
+    "service": "payments-api",
+    "assignee": "Dev Mehta",
+    "reporter": "Priya Raman",
+    "created": "2026-08-21T10:05:00+05:30",
+    "updated": "2026-10-20T12:00:00+05:30",
+    "fix_version": "2.14.1",
+    "labels": [
+      "postmortem",
+      "argocd",
+      "slo",
+      "deployment"
+    ],
+    "linked_incident": "pm-2026-08-19-payments-latency-pool-change"
+  },
+  {
+    "key": "NAV-4823",
+    "type": "Task",
+    "summary": "Rollback runbook disables ArgoCD auto-sync; payments-api deploy freeze 18:00-21:00 IST",
+    "description": "Postmortem action from pm-2026-08-19-payments-latency-pool-change. rb-platform-argocd-rollback now includes 'argocd app set <app> --sync-policy none' and the argocd wrapper script does it automatically after a rollback. Added a sync window on payments-api-prod blocking 18:00-21:00 IST unless the commit message carries [hotfix].",
+    "status": "Done",
+    "priority": "High",
+    "service": "payments-api",
+    "assignee": "Priya Raman",
+    "reporter": "Priya Raman",
+    "created": "2026-08-21T10:10:00+05:30",
+    "updated": "2026-09-01T11:00:00+05:30",
+    "fix_version": null,
+    "labels": [
+      "postmortem",
+      "argocd",
+      "runbook",
+      "process"
+    ],
+    "linked_incident": "pm-2026-08-19-payments-latency-pool-change"
+  },
+  {
+    "key": "NAV-4824",
+    "type": "Bug",
+    "summary": "Release the DB connection before calling PayGate (two-phase charge insert)",
+    "description": "Postmortem action from pm-2026-08-19-payments-latency-pool-change. The charge insert and the PayGate call were inside one transaction, so each in-flight request held a pool connection for the full ~600ms gateway round-trip. Now: insert charge row as 'pending' with the idempotency key, commit, call PayGate, then update status in a second short transaction.",
+    "status": "Done",
+    "priority": "Highest",
+    "service": "payments-api",
+    "assignee": "Dev Mehta",
+    "reporter": "Priya Raman",
+    "created": "2026-08-21T10:15:00+05:30",
+    "updated": "2026-09-12T17:00:00+05:30",
+    "fix_version": "2.13.0",
+    "labels": [
+      "postmortem",
+      "connection-pool",
+      "paygate"
+    ],
+    "linked_incident": "pm-2026-08-19-payments-latency-pool-change"
+  },
+  {
+    "key": "NAV-4702",
+    "type": "Task",
+    "summary": "Signing key expiry metric, AuthSigningKeyExpiresSoon alert, rotation runbook and calendar",
+    "description": "Postmortem action from pm-2026-07-03-auth-expired-signing-key. Emit auth_jwt_signing_key_expiry_seconds from the active JWKS key; alert at < 7 days. Wrote rb-auth-login-failures-jwt-key-rotation, added the triage order to the AuthTokenVerifyErrors annotation, and a 60-day rotation calendar owned by nav-platform-oncall.",
+    "status": "Done",
+    "priority": "Highest",
+    "service": "auth-service",
+    "assignee": "Anita Rao",
+    "reporter": "Anita Rao",
+    "created": "2026-07-06T10:00:00+05:30",
+    "updated": "2026-07-20T16:00:00+05:30",
+    "fix_version": "2.12.0",
+    "labels": [
+      "postmortem",
+      "jwt",
+      "alerting",
+      "runbook"
+    ],
+    "linked_incident": "pm-2026-07-03-auth-expired-signing-key"
+  },
+  {
+    "key": "NAV-4706",
+    "type": "Task",
+    "summary": "Automate JWT signing key rotation with a Vault-driven auth-key-rotator CronJob",
+    "description": "Postmortem action from pm-2026-07-03-auth-expired-signing-key. CronJob generates a new key 14 days before the active key's expiry, appends it to the JWKS in Vault, waits for JWKS propagation (JWKS_CACHE_TTL_SECONDS), then updates AUTH_JWT_ACTIVE_KID and removes the old key after 24h. Currently in staging soak.",
+    "status": "In Progress",
+    "priority": "Medium",
+    "service": "auth-service",
+    "assignee": "Kabir Shah",
+    "reporter": "Anita Rao",
+    "created": "2026-07-06T10:20:00+05:30",
+    "updated": "2026-10-22T09:00:00+05:30",
+    "fix_version": null,
+    "labels": [
+      "postmortem",
+      "jwt",
+      "automation",
+      "vault"
+    ],
+    "linked_incident": "pm-2026-07-03-auth-expired-signing-key"
+  },
+  {
+    "key": "NAV-4876",
+    "type": "Task",
+    "summary": "KEDA scaler on kafka_consumergroup_lag for assessment-engine-scorer",
+    "description": "Postmortem action from pm-2026-09-22-assessment-consumer-lag-exam-peak. Replace the CPU HPA with a KEDA ScaledObject on kafka_consumergroup_lag{group=\"assessment-scorer\"} targeting 10k lag per replica, min 12, max 24 (partition cap 48 threads). KEDA installed in nav-staging; prod rollout pending a load test.",
+    "status": "In Progress",
+    "priority": "High",
+    "service": "assessment-engine",
+    "assignee": "Kabir Shah",
+    "reporter": "Rohan Iyer",
+    "created": "2026-09-24T10:05:00+05:30",
+    "updated": "2026-10-21T15:00:00+05:30",
+    "fix_version": null,
+    "labels": [
+      "postmortem",
+      "kafka",
+      "autoscaling",
+      "keda"
+    ],
+    "linked_incident": "pm-2026-09-22-assessment-consumer-lag-exam-peak"
+  },
+  {
+    "key": "NAV-4877",
+    "type": "Story",
+    "summary": "Pre-exam auto-scale job driven by the content-cms exam calendar",
+    "description": "Postmortem action from pm-2026-09-22-assessment-consumer-lag-exam-peak. A CronJob reads /admin/exam-windows from content-cms every 10 minutes; 30 minutes before any window with > 50,000 registrations it scales assessment-engine-scorer to 24 replicas and sets SCORER_MAX_POLL_RECORDS=500, reverting 60 minutes after the window closes.",
+    "status": "In Review",
+    "priority": "High",
+    "service": "assessment-engine",
+    "assignee": "Rohan Iyer",
+    "reporter": "Rohan Iyer",
+    "created": "2026-09-24T10:10:00+05:30",
+    "updated": "2026-10-29T12:00:00+05:30",
+    "fix_version": "2.14.1",
+    "labels": [
+      "postmortem",
+      "kafka",
+      "autoscaling",
+      "exams"
+    ],
+    "linked_incident": "pm-2026-09-22-assessment-consumer-lag-exam-peak"
+  },
+  {
+    "key": "NAV-4878",
+    "type": "Task",
+    "summary": "Repartition assessment.responses.v2 from 48 to 96 partitions",
+    "description": "Postmortem action from pm-2026-09-22-assessment-consumer-lag-exam-peak. Partition count caps scorer parallelism at 48 threads. Plan: create assessment.responses.v3 with 96 partitions, dual-produce for 7 days, cut consumers over, retire v2. Needs a migration ADR and a quiet week outside exam windows.",
+    "status": "To Do",
+    "priority": "Medium",
+    "service": "assessment-engine",
+    "assignee": "Rohan Iyer",
+    "reporter": "Rohan Iyer",
+    "created": "2026-09-24T10:15:00+05:30",
+    "updated": "2026-09-24T10:15:00+05:30",
+    "fix_version": null,
+    "labels": [
+      "postmortem",
+      "kafka",
+      "capacity"
+    ],
+    "linked_incident": "pm-2026-09-22-assessment-consumer-lag-exam-peak"
+  },
+  {
+    "key": "NAV-4588",
+    "type": "Bug",
+    "summary": "Dedupe fails closed for bulk templates; add notification_duplicate_send_total and alert",
+    "description": "Postmortem action from pm-2026-06-11-notification-duplicate-push. When notify-dedupe Redis is unavailable, only templates listed in NOTIFY_FAIL_OPEN_TEMPLATES (otp, password_reset) are sent; result_release, announcement and homework_reminder tasks are retried with backoff instead. Added notification_duplicate_send_total and NotificationDuplicateSendDetected.",
+    "status": "Done",
+    "priority": "Highest",
+    "service": "notification-worker",
+    "assignee": "Kabir Shah",
+    "reporter": "Kabir Shah",
+    "created": "2026-06-12T10:00:00+05:30",
+    "updated": "2026-06-26T15:00:00+05:30",
+    "fix_version": "2.12.0",
+    "labels": [
+      "postmortem",
+      "idempotency",
+      "push",
+      "alerting"
+    ],
+    "linked_incident": "pm-2026-06-11-notification-duplicate-push"
+  },
+  {
+    "key": "NAV-4590",
+    "type": "Task",
+    "summary": "Dedicated notify-dedupe Redis for prod with network policy; in-process LRU backstop",
+    "description": "Postmortem action from pm-2026-06-11-notification-duplicate-push. Provision a prod-only notify-dedupe Redis, NetworkPolicy allowing only the notifications namespace, and a separate staging instance. FCM wrapper keeps an in-process LRU of (template, recipient, event_id) for 24h so a Redis outage still caps sends at one per key per pod.",
+    "status": "Done",
+    "priority": "High",
+    "service": "notification-worker",
+    "assignee": "Anita Rao",
+    "reporter": "Kabir Shah",
+    "created": "2026-06-12T10:10:00+05:30",
+    "updated": "2026-07-02T12:00:00+05:30",
+    "fix_version": "2.12.0",
+    "labels": [
+      "postmortem",
+      "redis",
+      "infra",
+      "idempotency"
+    ],
+    "linked_incident": "pm-2026-06-11-notification-duplicate-push"
+  },
+  {
+    "key": "NAV-4592",
+    "type": "Task",
+    "summary": "Block notification-worker deploys while notify-bulk depth > 1,000",
+    "description": "Postmortem action from pm-2026-06-11-notification-duplicate-push. ArgoCD pre-sync hook queries rabbitmq_queue_messages_ready{queue=\"notify-bulk\"}; if > 1,000 the sync fails with a clear message and the deploy waits for the bulk send to finish. Hook written; waiting on Prometheus access from the argocd namespace.",
+    "status": "In Progress",
+    "priority": "Medium",
+    "service": "notification-worker",
+    "assignee": "Kabir Shah",
+    "reporter": "Kabir Shah",
+    "created": "2026-06-12T10:20:00+05:30",
+    "updated": "2026-10-15T11:00:00+05:30",
+    "fix_version": "2.14.1",
+    "labels": [
+      "postmortem",
+      "argocd",
+      "deployment"
+    ],
+    "linked_incident": "pm-2026-06-11-notification-duplicate-push"
+  },
+  {
+    "key": "NAV-4790",
+    "type": "Bug",
+    "summary": "Nightly ETL load_warehouse fails with ColumnNotFound: superseded_by",
+    "description": "assessment-engine 2.13 added attempt_scores.superseded_by for rescoring without a matching migration in navigator-warehouse-etl. load_warehouse failed on 2026-10-25 (ReportingEtlFailed); district dashboards were a day stale. Fixed in DEP-3295 by adding the column to the extract and warehouse DDL; added a schema-drift check to the ETL CI.",
+    "status": "Done",
+    "priority": "High",
+    "service": "reporting-db",
+    "assignee": "Kabir Shah",
+    "reporter": "Kabir Shah",
+    "created": "2026-10-25T06:10:00+05:30",
+    "updated": "2026-10-26T10:00:00+05:30",
+    "fix_version": null,
+    "labels": [
+      "bug",
+      "etl",
+      "schema"
+    ],
+    "linked_incident": null
+  }
+]

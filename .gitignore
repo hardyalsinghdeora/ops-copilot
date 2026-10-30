@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+data/.index/
+data/.drafts/
+data/.chroma/
+.pytest_cache/
+.ruff_cache/
+*.log
+eval-report*.json
+.DS_Store
