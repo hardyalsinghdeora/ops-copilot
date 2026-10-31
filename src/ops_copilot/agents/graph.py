@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
@@ -94,7 +95,7 @@ def initial_state(task: str, route: Route | None = None) -> CopilotState:
     }
 
 
-def thread_config(thread_id: str) -> dict:
+def thread_config(thread_id: str) -> RunnableConfig:
     return {"configurable": {"thread_id": thread_id}}
 
 

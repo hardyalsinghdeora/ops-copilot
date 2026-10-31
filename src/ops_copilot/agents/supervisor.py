@@ -7,11 +7,13 @@ an unexpected string.
 
 from __future__ import annotations
 
+from typing import cast
+
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from .prompts import SUPERVISOR
-from .state import CopilotState, RouteDecision
+from .state import CopilotState, Route, RouteDecision
 
 
 def build_supervisor(llm: BaseChatModel):
@@ -21,7 +23,7 @@ def build_supervisor(llm: BaseChatModel):
         if state.get("route"):  # route already fixed by the caller (API endpoints) or a retry
             return {}
         task = state.get("task") or _last_human_text(state)
-        decision: RouteDecision = router.invoke([SystemMessage(content=SUPERVISOR), HumanMessage(content=task)])
+        decision = cast(RouteDecision, router.invoke([SystemMessage(content=SUPERVISOR), HumanMessage(content=task)]))
         return {"route": decision.route, "route_reason": decision.reason, "task": task}
 
     return supervisor
@@ -34,5 +36,8 @@ def _last_human_text(state: CopilotState) -> str:
     return ""
 
 
-def route_from_state(state: CopilotState) -> str:
-    return state["route"]
+def route_from_state(state: CopilotState) -> Route:
+    route = state.get("route")
+    if route is None:  # the supervisor always sets it before this edge runs
+        raise ValueError("no route set after the supervisor")
+    return route

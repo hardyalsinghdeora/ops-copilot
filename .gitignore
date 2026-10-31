@@ -14,3 +14,5 @@ data/.chroma/
 *.log
 eval-report*.json
 .DS_Store
+.mypy_cache/
+.coverage

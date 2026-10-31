@@ -8,6 +8,8 @@ This is the "Reflexion"-style self-correction loop, with two production guards:
 
 from __future__ import annotations
 
+from typing import cast
+
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -30,12 +32,11 @@ def build_reviewer(llm: BaseChatModel, max_rounds: int = 2):
 
     def reviewer(state: CopilotState) -> dict:
         draft = state.get("draft", "")
-        verdict: ReviewVerdict = judge.invoke(
-            [
-                SystemMessage(content=REVIEWER),
-                HumanMessage(content=reviewer_input(state.get("task", ""), draft, render_evidence(state))),
-            ]
-        )
+        messages = [
+            SystemMessage(content=REVIEWER),
+            HumanMessage(content=reviewer_input(state.get("task", ""), draft, render_evidence(state))),
+        ]
+        verdict = cast(ReviewVerdict, judge.invoke(messages))
         attempts = state.get("attempts", 0)
         review = verdict.model_dump()
         if verdict.verdict == "revise" and attempts < max_rounds:

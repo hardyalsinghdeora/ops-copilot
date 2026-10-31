@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from typing import cast
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -69,7 +70,8 @@ def build_specialist(
     # Once the budget is spent the tools stay declared (Anthropic rejects a request whose
     # history holds tool_use/tool_result blocks but declares no tools); tool_choice "none"
     # is what stops further calls.
-    llm_answer_only = llm.bind_tools(tools, tool_choice={"type": "none"}) if tools else llm
+    # (the dict form is required: ChatAnthropic reads a plain "none" string as a tool name)
+    llm_answer_only = llm.bind_tools(tools, tool_choice={"type": "none"}) if tools else llm  # type: ignore[arg-type]
     tool_node = ToolNode(tools, handle_tool_errors=True)
     formatter = llm.with_structured_output(output_schema) if output_schema else None
 
@@ -89,15 +91,19 @@ def build_specialist(
         return {"messages": [response]}
 
     async def run_tools(state: CopilotState) -> dict:
-        last: AIMessage = state["messages"][-1]
+        last = cast(AIMessage, state["messages"][-1])
         result = await tool_node.ainvoke({"messages": [last]})
         tool_msgs: list[ToolMessage] = result["messages"]
         evidence: list[Evidence] = []
-        by_id = {tc["id"]: tc for tc in last.tool_calls}
+        calls = {tc["id"]: tc for tc in last.tool_calls}
         for tm in tool_msgs:
-            tc = by_id.get(tm.tool_call_id, {})
+            call = calls.get(tm.tool_call_id)
             evidence.append(
-                Evidence(tool=tm.name or tc.get("name", "?"), args=tc.get("args", {}), content=_render_tool_content(tm.content))
+                Evidence(
+                    tool=tm.name or (call["name"] if call else "?"),
+                    args=call["args"] if call else {},
+                    content=_render_tool_content(tm.content),
+                )
             )
         return {
             "messages": tool_msgs,
@@ -110,13 +116,12 @@ def build_specialist(
         text = last.content if isinstance(last.content, str) else _render_tool_content(last.content)
         if formatter is None:
             return {"draft": text}
-        report: BaseModel = await formatter.ainvoke(
-            [
-                SystemMessage(content=FORMAT_PROMPT),
-                *state["messages"],
-                HumanMessage(content="Convert your final conclusion above into the required structured report. Do not add facts."),
-            ]
-        )
+        messages = [
+            SystemMessage(content=FORMAT_PROMPT),
+            *state["messages"],
+            HumanMessage(content="Convert your final conclusion above into the required structured report. Do not add facts."),
+        ]
+        report = cast(BaseModel, await formatter.ainvoke(messages))
         rendered = report.to_markdown() if hasattr(report, "to_markdown") else report.model_dump_json(indent=2)
         return {"draft": rendered, "report": report.model_dump()}
 
@@ -145,7 +150,7 @@ def build_specialist(
         sub-graph with an empty ``evidence`` list and returning just what it produced
         keeps the parent's list correct.
         """
-        inner = {**state, "evidence": []}
+        inner: CopilotState = {**state, "evidence": []}
         result = await subgraph.ainvoke(inner)
         out = {
             "messages": result["messages"][len(state["messages"]) :],

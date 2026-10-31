@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any, cast
 
 import chromadb
+from chromadb.api.types import Embeddings as ChromaEmbeddings
 
 from .embeddings import EmbeddingProvider
 from .models import Chunk, RetrievedChunk
@@ -41,7 +43,7 @@ class ChromaStore:
             self.collection.add(
                 ids=[c.id for c in batch],
                 documents=[c.text for c in batch],
-                embeddings=self.embeddings.embed_documents([c.text for c in batch]),
+                embeddings=cast(ChromaEmbeddings, self.embeddings.embed_documents([c.text for c in batch])),
                 metadatas=[{**c.metadata, "doc_id": c.doc_id, "index": c.index} for c in batch],
             )
 
@@ -58,16 +60,16 @@ class ChromaStore:
         if self.count() == 0:
             return []
         res = self.collection.query(
-            query_embeddings=[self.embeddings.embed_query(text)],
+            query_embeddings=cast(ChromaEmbeddings, [self.embeddings.embed_query(text)]),
             n_results=min(k, self.count()),
             where=where or None,
             include=["documents", "metadatas", "distances"],
         )
+        docs, metas, dists = res["documents"], res["metadatas"], res["distances"]
+        assert docs is not None and metas is not None and dists is not None  # all requested in include=
         out: list[RetrievedChunk] = []
-        for cid, doc, meta, dist in zip(
-            res["ids"][0], res["documents"][0], res["metadatas"][0], res["distances"][0], strict=False
-        ):
-            meta = dict(meta or {})
+        for cid, doc, raw_meta, dist in zip(res["ids"][0], docs[0], metas[0], dists[0], strict=False):
+            meta: dict[str, Any] = dict(raw_meta or {})  # values are what add() stored: str / int
             chunk = Chunk(
                 id=cid,
                 doc_id=str(meta.pop("doc_id")),

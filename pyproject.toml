@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.5"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "pytest-cov>=5", "ruff>=0.5", "mypy>=1.10", "pre-commit>=3.5"]
 voyage = ["voyageai>=0.3"]
 
 [project.scripts]
@@ -47,6 +47,16 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
 markers = ["slow: spawns MCP subprocesses"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+plugins = ["pydantic.mypy"]
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["rank_bm25", "voyageai"]  # no type hints / optional extra
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100

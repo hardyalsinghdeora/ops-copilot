@@ -10,6 +10,8 @@ Scores are 1–5 with a one-line rationale, produced as structured output by the
 
 from __future__ import annotations
 
+from typing import cast
+
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
@@ -32,4 +34,4 @@ def judge_answer(llm: BaseChatModel, question: str, answer: str, context: str, r
         f"QUESTION:\n{question}\n\nANSWER:\n{answer}\n\nCONTEXT (retrieved):\n{context}\n\n"
         f"REFERENCE ANSWER (human-written):\n{reference}"
     )
-    return grader.invoke([SystemMessage(content=JUDGE_SYSTEM), HumanMessage(content=prompt)])
+    return cast(JudgeScores, grader.invoke([SystemMessage(content=JUDGE_SYSTEM), HumanMessage(content=prompt)]))

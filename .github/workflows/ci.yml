@@ -17,10 +17,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: pip install -e ".[dev]"
+          cache-dependency-path: requirements.lock
+      - run: pip install -c requirements.lock -e ".[dev]"
       - run: ruff check src tests
+      - run: mypy
       - name: Unit tests (offline — hashing embeddings, scripted LLMs)
-        run: pytest -q -m "not slow"
+        run: pytest -q -m "not slow" --cov=ops_copilot --cov-report=term-missing:skip-covered
       - name: MCP stdio round-trip
         run: pytest -q -m slow
       - name: Retrieval eval (offline)
