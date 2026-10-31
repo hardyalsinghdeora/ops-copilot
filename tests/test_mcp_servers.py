@@ -78,6 +78,16 @@ def test_fixtures_are_cross_consistent():
         assert set(s["dependencies"]) <= services, s["id"]
 
 
+def test_mcp_servers_do_not_receive_the_anthropic_key(monkeypatch):
+    from ops_copilot.mcp_client import mcp_server_config
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    monkeypatch.setenv("VOYAGE_API_KEY", "pa-test")
+    for server in mcp_server_config().values():
+        assert "ANTHROPIC_API_KEY" not in server["env"]
+        assert server["env"]["VOYAGE_API_KEY"] == "pa-test"  # the knowledge server may embed with Voyage
+
+
 def test_local_tools_mirror_mcp_tools(local_tools):
     names = {t.name for t in local_tools}
     assert names == {

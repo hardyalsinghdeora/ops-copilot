@@ -38,9 +38,3 @@ class RetrievedChunk(BaseModel):
     chunk: Chunk
     score: float
     sources: list[str] = Field(default_factory=list)  # which retrievers found it: bm25 / vector
-
-    def render(self) -> str:
-        """Compact text block handed to the LLM as evidence."""
-        meta = self.chunk.metadata
-        header = f"{self.chunk.citation} {meta.get('title', '')} — {self.chunk.heading}".strip()
-        return f"{header}\n{self.chunk.text}"

@@ -78,20 +78,3 @@ class ChromaStore:
             )
             out.append(RetrievedChunk(chunk=chunk, score=1.0 - float(dist), sources=["vector"]))
         return out
-
-    def get_by_doc(self, doc_id: str) -> list[Chunk]:
-        res = self.collection.get(where={"doc_id": doc_id}, include=["documents", "metadatas"])
-        chunks: list[Chunk] = []
-        for cid, doc, meta in zip(res["ids"], res["documents"], res["metadatas"], strict=False):
-            meta = dict(meta or {})
-            chunks.append(
-                Chunk(
-                    id=cid,
-                    doc_id=str(meta.pop("doc_id")),
-                    index=int(meta.pop("index")),
-                    heading=str(meta.get("heading", "")),
-                    text=doc,
-                    metadata={k: str(v) for k, v in meta.items()},
-                )
-            )
-        return sorted(chunks, key=lambda c: c.index)

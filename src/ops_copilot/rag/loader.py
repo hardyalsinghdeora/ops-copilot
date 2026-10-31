@@ -8,7 +8,6 @@ easy to read and easy to swap for Confluence/Notion loaders later.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
 from pathlib import Path
 
 from .models import Document
@@ -59,7 +58,3 @@ def load_knowledge_base(root: Path) -> list[Document]:
             raise ValueError(f"Duplicate document id in knowledge base: {d.id}")
         seen.add(d.id)
     return docs
-
-
-def iter_documents(root: Path) -> Iterable[Document]:
-    yield from load_knowledge_base(root)

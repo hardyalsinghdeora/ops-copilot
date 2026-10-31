@@ -27,9 +27,10 @@ OPS_TOOL_NAMES = {"get_service", "get_active_alerts", "list_recent_deployments",
 
 def _server_env() -> dict[str, str]:
     """MCP stdio clients start servers with a *minimal* environment on purpose (least
-    privilege). Forward only what our servers need: settings, keys, import path."""
+    privilege). Forward only what our servers need: settings, the embedding key, import path.
+    The servers never call Claude, so ANTHROPIC_API_KEY stays with the agents."""
     keep_prefixes = ("OPS_COPILOT_",)
-    keep_exact = {"ANTHROPIC_API_KEY", "VOYAGE_API_KEY", "PYTHONPATH", "PATH", "HOME", "VIRTUAL_ENV"}
+    keep_exact = {"VOYAGE_API_KEY", "PYTHONPATH", "PATH", "HOME", "VIRTUAL_ENV"}
     return {
         k: v
         for k, v in os.environ.items()
