@@ -20,7 +20,7 @@ No single provider fits all three, and the best small model will change over the
 
 | Provider | Default for | Notes |
 |---|---|---|
-| `LocalMiniLM` | Development and demos (**default**) | A small sentence-transformer exported to ONNX and run with the ONNX runtime on CPU. No key, no cost, offline after first download, small dependency footprint. |
+| `LocalMiniLMEmbeddings` | Development and demos (**default**) | A small sentence-transformer exported to ONNX and run with the ONNX runtime on CPU. No key, no cost, offline after first download, small dependency footprint. |
 | `VoyageEmbeddings` | Quality when a key is available | Hosted; installed via the `voyage` extra. Better recall on code-heavy and long passages. |
 | `HashingEmbeddings` | Tests and CI | Deterministic feature hashing of tokens into a fixed-size vector. Not semantic; exists so the full pipeline runs with no model at all. |
 

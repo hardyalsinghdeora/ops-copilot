@@ -63,13 +63,13 @@ def search_knowledge(query: str, kind: str | None = None, service: str | None = 
     """Search runbooks, ADRs, postmortems and service pages.
 
     Use this first for any 'how do I' or 'what happened when' question. Returns up to k chunks,
-    each with `chunk_id` (cite it as [chunk_id]), `doc_id`, `title`, `heading`, `text`, `score`.
+    each with `id` (cite it as [id]), `doc_id`, `title`, `heading`, `text`, `score`.
     `kind` filters to runbook|adr|postmortem|service; `service` filters by service name.
     If a filtered search returns nothing, retry without filters.
     """
     filt = {k_: v for k_, v in {"kind": kind, "service": service}.items() if v}
     hits = _get_retriever().search(query, k=k, filter=filt or None)
-    return [{"chunk_id": h.chunk.id, "doc_id": h.chunk.doc_id, "title": h.chunk.metadata["title"],
+    return [{"id": h.chunk.id, "doc_id": h.chunk.doc_id, "title": h.chunk.metadata["title"],
              "heading": h.chunk.heading, "text": h.chunk.text, "score": h.score} for h in hits]
 
 @mcp.tool()
@@ -177,7 +177,7 @@ Edit `claude_desktop_config.json` (on macOS: `~/Library/Application Support/Clau
       "command": "/absolute/path/to/your/venv/bin/python",
       "args": ["-m", "ops_copilot.mcp_servers.knowledge_server"],
       "env": {
-        "OPS_COPILOT_INDEX_DIR": "/absolute/path/to/ops-copilot/data/.index",
+        "OPS_COPILOT_ROOT": "/absolute/path/to/ops-copilot",
         "OPS_COPILOT_EMBEDDING_PROVIDER": "local"
       }
     }
@@ -188,7 +188,7 @@ Edit `claude_desktop_config.json` (on macOS: `~/Library/Application Support/Clau
 Points that trip people up:
 
 - Use the **absolute path to the Python interpreter** of the virtualenv where you ran `pip install -e .`. Claude Desktop does not inherit your shell's `PATH` or activated environment.
-- The server must be able to find the index. `Settings` defaults `index_dir` to `<repo>/data/.index`, so if the server runs from an installed package elsewhere, set `OPS_COPILOT_INDEX_DIR` to the absolute path of the index you built with `ops-copilot ingest`. `ops-copilot mcp-config` prints a ready-made block with the right interpreter path.
+- The server must be able to find `data/` (knowledge base, fixtures and the index you built with `ops-copilot ingest`). Claude Desktop starts it in a directory of its choosing, so set `OPS_COPILOT_ROOT` to the repo (or wherever `data/` lives). `ops-copilot mcp-config` prints it for you. `ops-copilot mcp-config` prints a ready-made block with the right interpreter path.
 - Restart Claude Desktop after editing. Tools appear in the tools panel; ask "search our runbooks for the payments latency procedure" and watch `search_knowledge` get called.
 - The knowledge server only needs the embedding provider, not an Anthropic key; the reasoning happens in the host.
 

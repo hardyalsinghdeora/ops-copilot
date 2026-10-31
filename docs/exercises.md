@@ -46,7 +46,7 @@ Before Week 1, complete the quickstart in [`00-start-here.md`](00-start-here.md)
 | Thu | Chapter 05, reviewer and failure modes; [`adr/0003`](adr/0003-supervisor-specialists-reviewer.md) and [`adr/0004`](adr/0004-human-in-the-loop-side-effects.md) | Exercise 05.3 (reject a ticket, inspect the checkpoint) |
 | Fri | Finish Chapter 05; LangGraph human-in-the-loop docs | Exercise 02.3 (inject and defend), now that you understand both the tool boundary and the reviewer |
 
-**Stretch project — a real GitHub MCP server.** Add a third server to `ops_copilot.mcp_client.SERVERS` that exposes a GitHub integration: either the official GitHub MCP server (configured with a token scoped to one repository) or a small FastMCP server of your own with `list_recent_prs(repo, days)` and `get_pr(repo, number)` over the GitHub REST API. Give `release_agent` access to the PR tools so release notes can link tickets to merged pull requests. Keep every tool read-only. Add one golden-set case that depends on PR data.
+**Stretch project — a real GitHub MCP server.** Add a third server to the connection map in `ops_copilot.mcp_client.mcp_server_config()` that exposes a GitHub integration: either the official GitHub MCP server (configured with a token scoped to one repository) or a small FastMCP server of your own with `list_recent_prs(repo, days)` and `get_pr(repo, number)` over the GitHub REST API. Give `release_agent` access to the PR tools so release notes can link tickets to merged pull requests. Keep every tool read-only. Add one golden-set case that depends on PR data.
 
 ## Week 4 — Evaluation, production, and extending the system
 

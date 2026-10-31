@@ -141,15 +141,17 @@ Keep a `evals/results/` directory (git-ignored or committed, your call) with one
 
 ## Cost and latency tracking
 
-Every model response from `langchain-anthropic` carries `usage_metadata` with input and output token counts. Sum them per run and record alongside the scores:
+Every model response from `langchain-anthropic` carries `usage_metadata` with input and output token counts. Summing it over `state["messages"]` undercounts: structured-output calls (supervisor, reviewer, the triage report formatter) never land in the message list. A usage callback sees every model call in the run, split by model, which matters because Sonnet and Haiku are priced differently:
 
 ```python
-total_in = total_out = 0
-for msg in state["messages"]:
-    if getattr(msg, "usage_metadata", None):
-        total_in += msg.usage_metadata["input_tokens"]
-        total_out += msg.usage_metadata["output_tokens"]
+from langchain_core.callbacks import get_usage_metadata_callback
+
+with get_usage_metadata_callback() as usage:
+    state = await graph.ainvoke(initial_state(question, "knowledge"), config)
+usage.usage_metadata  # {"claude-sonnet-5-5": {"input_tokens": ..., ...}, "claude-haiku-5-5": {...}}
 ```
+
+`ops-copilot eval --judge` does this and reports `tokens_by_model` next to the scores.
 
 Also record wall-clock time per node (LangGraph's stream events carry timestamps) and the number of tool calls. A change that improves faithfulness by a little and doubles cost is a decision, not a win, and you can only make it if both numbers are in front of you.
 

@@ -76,7 +76,7 @@ Terms used across these docs and in the Ops Copilot codebase, alphabetically. Wh
 
 **Node.** A function in a LangGraph graph that takes the state and returns a partial update.
 
-**ONNX.** An open format for running trained models with a lightweight runtime; `LocalMiniLM` runs a sentence-embedding model this way on CPU without a deep-learning framework.
+**ONNX.** An open format for running trained models with a lightweight runtime; `LocalMiniLMEmbeddings` runs a sentence-embedding model this way on CPU without a deep-learning framework.
 
 **Overlap.** Repeating the tail of one chunk at the start of the next so that sentences cut at a boundary remain whole in at least one chunk.
 

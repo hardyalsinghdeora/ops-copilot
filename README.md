@@ -45,7 +45,7 @@ Full diagram and component table: [`docs/architecture.md`](docs/architecture.md)
 ```bash
 git clone https://github.com/hardyalsinghdeora/ops-copilot && cd ops-copilot
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -c requirements.lock -e ".[dev]"   # versions pinned by requirements.lock
 cp .env.example .env            # add ANTHROPIC_API_KEY
 
 ops-copilot ingest              # ~30 s: downloads the small ONNX embedding model once, builds the index
@@ -103,6 +103,8 @@ This repo doubles as a self-study course. Start at [`docs/README.md`](docs/READM
 ```bash
 pytest -q -m "not slow"   # ~10 s, fully offline
 pytest -q                 # + MCP stdio round-trip (spawns the servers as subprocesses)
+ruff check src tests && mypy
+pre-commit install        # optional: run ruff + mypy on every commit
 ```
 
 ## Status & honest limitations

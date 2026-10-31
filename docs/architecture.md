@@ -35,7 +35,7 @@ Ops Copilot is a **multi-agent, retrieval-grounded assistant for on-call enginee
 | LLM | `ops_copilot.llm` | `get_llm(role)` → `ChatAnthropic`. Two roles: `"strong"` (Sonnet) for specialists, `"fast"` (Haiku) for routing & judging. |
 | RAG | `ops_copilot.rag.loader` | Load markdown with YAML front-matter → `Document(id, title, kind, service, text, metadata)`. |
 | | `ops_copilot.rag.chunker` | Heading-aware chunking with token-ish size + overlap → `Chunk(id, doc_id, heading, text, metadata)`. |
-| | `ops_copilot.rag.embeddings` | `EmbeddingProvider` protocol; `LocalMiniLM` (ONNX, default), `VoyageEmbeddings`, `HashingEmbeddings` (deterministic, offline — tests/CI). |
+| | `ops_copilot.rag.embeddings` | `EmbeddingProvider` protocol; `LocalMiniLMEmbeddings` (ONNX, default), `VoyageEmbeddings`, `HashingEmbeddings` (deterministic, offline — tests/CI). |
 | | `ops_copilot.rag.store` | `ChromaStore` persistent vector store (`data/.index/chroma`). |
 | | `ops_copilot.rag.retriever` | `HybridRetriever`: BM25 (lexical) + vector (semantic) fused with Reciprocal Rank Fusion; optional metadata filter; returns `RetrievedChunk(score, chunk)`. |
 | | `ops_copilot.rag.ingest` | `ingest(kb_dir)` pipeline → store + BM25 index saved to disk. |
@@ -51,7 +51,7 @@ Ops Copilot is a **multi-agent, retrieval-grounded assistant for on-call enginee
 | | `ops_copilot.agents.human_approval` | `interrupt()` node — a drafted ticket is only filed after a human approves (human-in-the-loop). |
 | | `ops_copilot.agents.graph` | `build_graph(llm_strong, llm_fast, tools, checkpointer)` wires it all. |
 | Interfaces | `ops_copilot.cli` | `ingest`, `ask`, `triage`, `release-notes`, `eval`, `serve`, `mcp` (run a server). |
-| | `ops_copilot.api.main` | FastAPI: `POST /chat`, `POST /triage`, `POST /release-notes`, `GET /health`. |
+| | `ops_copilot.api.main` | FastAPI: `POST /chat`, `POST /triage`, `POST /approve`, `POST /release-notes`, `GET /health`. |
 | Evals | `ops_copilot.evals` | `golden.json` Q/A set; `retrieval_eval` (hit@k, MRR); `judge` (faithfulness / answer-relevance via Haiku). |
 
 ## Request lifecycle (knowledge question)
@@ -90,7 +90,7 @@ Ops Copilot is a **multi-agent, retrieval-grounded assistant for on-call enginee
 
 ```
 cp .env.example .env            # add ANTHROPIC_API_KEY
-pip install -e ".[dev]"
+pip install -c requirements.lock -e ".[dev]"
 ops-copilot ingest              # build index
 ops-copilot ask "…"             # knowledge Q&A
 ops-copilot triage "…"          # incident triage (asks approval before filing ticket)

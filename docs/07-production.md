@@ -89,7 +89,7 @@ Adding SSE to the FastAPI service is one of the stretch projects in [`exercises.
 
 - Decide what the knowledge base may contain and enforce it at ingest (redaction or rejection).
 - Tool results from Jira and PagerDuty will contain names; that is usually fine internally, but log scrubbing should remove them before traces leave your boundary.
-- Do not send the knowledge base to a third-party embedding API (`VoyageEmbeddings`) without checking your data agreement; `LocalMiniLM` exists partly for this reason.
+- Do not send the knowledge base to a third-party embedding API (`VoyageEmbeddings`) without checking your data agreement; `LocalMiniLMEmbeddings` exists partly for this reason.
 
 **Output guardrails.** The reviewer checks faithfulness. For a customer-facing status update you would add a second check for tone and for leaking internal detail.
 
@@ -104,15 +104,15 @@ Adding SSE to the FastAPI service is one of the stretch projects in [`exercises.
 
 ## Deployment
 
-**Now.** `ops-copilot serve` runs uvicorn on `:8000` with `POST /chat`, `POST /triage`, `POST /release-notes`, `GET /health`. The checkpointer is in memory.
+**Now.** `ops-copilot serve` runs uvicorn on `:8000` with `POST /chat`, `POST /triage`, `POST /approve`, `POST /release-notes`, `GET /health`. The checkpointer is in memory.
 
 **Production.**
 
-- **Container.** A Dockerfile that installs the package, bakes in the ONNX embedding model (so startup does not download), runs `ops-copilot ingest` as a build step or an init container, and starts `ops-copilot serve`. The MCP servers run as subprocesses inside the same container over stdio; that is fine until you want to share them, at which point they become their own deployments over streamable HTTP.
+- **Container.** The repo's `Dockerfile` installs the package (pinned by `requirements.lock`), runs `ops-copilot ingest` at build time so the index and ONNX embedding model are baked in (startup does not download), runs as a non-root user with a `HEALTHCHECK`, and starts `ops-copilot serve`; CI builds it and probes `/health`. In production the ingest step can also be an init container. The MCP servers run as subprocesses inside the same container over stdio; that is fine until you want to share them, at which point they become their own deployments over streamable HTTP.
 - **Persistent checkpointer.** `interrupt()` with `MemorySaver` cannot survive a restart or a second replica. Use the Postgres or SQLite checkpointer from LangGraph so an approval started on one replica can resume on another.
 - **Index as an artefact.** Build `data/.index/chroma` and `data/.index/bm25.pkl` in CI, version them with the knowledge-base commit, mount them read-only. Rebuild on knowledge-base change, not on API deploy.
 - **Health.** `GET /health` should check the index is loaded and the MCP servers respond to `tools/list`, not just that the process is up.
-- **Human approval over HTTP.** `POST /triage` returns `{"status": "awaiting_approval", "thread_id": ..., "draft": ...}`; a follow-up `POST /approve` with the thread id and decision resumes the graph with `Command(resume=...)`. In Slack this is two buttons.
+- **Human approval over HTTP.** The API already works this way: when triage drafts a ticket, `POST /triage` returns the `thread_id` and `pending_approval` (the drafted ticket); `POST /approve` with that thread id and the decision resumes the graph with `Command(resume=...)`, and new messages on the thread get a 409 until then. In Slack this is two buttons.
 
 ## Honest limitations
 
@@ -137,7 +137,7 @@ None of these are surprises; they are the gap between a project that demonstrate
 
 ## Exercises
 
-1. **Dockerfile.** Write one that installs the package, runs `ops-copilot ingest` at build time with `OPS_COPILOT_EMBEDDING_PROVIDER=hashing`, and starts `ops-copilot serve`. Confirm `GET /health` responds. Then switch to the local ONNX provider and note how the image size and build time change.
+1. **Dockerfile.** Build the repo's image (`docker build -t ops-copilot .`), run it with your API key and confirm `GET /health` responds. Then run the ingest step with `OPS_COPILOT_EMBEDDING_PROVIDER=hashing` (and the container with the same setting: an index refuses a different provider) and compare image size and build time with the default local ONNX provider.
 2. **Persistent checkpointer.** Swap `MemorySaver` for LangGraph's SQLite checkpointer in `serve`. Start a triage via `POST /triage`, restart the process, and resume the approval. Confirm the ticket is filed only after the resume.
 3. **Progress streaming.** Add an SSE endpoint that forwards LangGraph node start/end events for a `POST /chat` run. Measure perceived latency with and without it.
 4. **Threat model.** Write a one-page list of the ways an attacker who can edit one runbook could influence the system, and which existing layer (prompt, scoping, reviewer, human approval) stops each. Identify the one that nothing currently stops.

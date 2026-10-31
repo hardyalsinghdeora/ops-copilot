@@ -41,9 +41,9 @@ The request flow for the 02:14 page above, as the spec describes it:
 1. `ops-copilot triage "PagerDuty: payments-api p99 latency > 2s since 02:10"`
 2. The **supervisor** (fast model, structured output) classifies the request as `triage`.
 3. The **triage agent** (strong model) runs a tool loop: `get_active_alerts` → `get_service("payments-api")` for owner, on-call and dependencies → `list_recent_deployments(service, hours=24)` → `search_tickets(...)` for similar incidents → `search_knowledge(...)` for the latency runbook.
-4. It produces a `TriageReport` (severity, suspected cause, matching runbook, recent changes, similar incidents, next steps, draft ticket) and calls `draft_ticket`.
-5. The graph **interrupts** at `human_approval`. You read the draft in the CLI and approve or reject.
-6. On approval the ticket is written to `data/.drafts/`, the **reviewer** checks the report against the evidence that was gathered, and the graph ends.
+4. It calls `draft_ticket`, which saves a draft to `data/.drafts/` (nothing is filed), and produces a `TriageReport` (severity, suspected cause, matching runbook, recent changes, similar incidents, next steps, draft ticket).
+5. The **reviewer** checks the report against the evidence that was gathered, and sends it back for revision if a claim is unsupported.
+6. The graph **interrupts** at `human_approval`. You read the draft in the CLI and approve or reject; the draft is marked accordingly and the graph ends.
 
 For a plain knowledge question (`ops-copilot ask "How do I rotate the payments DB credentials?"`) the path is shorter: supervisor → knowledge agent → `search_knowledge` → draft with `[doc_id#chunk]` citations → reviewer → answer. If the reviewer finds an unsupported claim it returns `revise` with feedback and the specialist tries again, at most twice.
 
@@ -82,11 +82,11 @@ This follows the Running section of the spec exactly.
 # 1. Clone, then configure. You need an Anthropic API key for ask/triage/release-notes.
 cp .env.example .env            # add ANTHROPIC_API_KEY
 
-# 2. Install in editable mode with dev extras (pytest, ruff).
-pip install -e ".[dev]"
+# 2. Install in editable mode with dev extras (pytest, ruff, mypy), pinned by the lockfile.
+pip install -c requirements.lock -e ".[dev]"
 
 # 3. Build the index. Reads data/knowledge_base/**/*.md, chunks, embeds with the
-#    default LocalMiniLM ONNX provider, writes data/.index/chroma and data/.index/bm25.pkl.
+#    default LocalMiniLMEmbeddings ONNX provider, writes data/.index/chroma and data/.index/bm25.pkl.
 ops-copilot ingest
 
 # 4. Ask a knowledge question. Watch for the [doc_id#chunk] citations.
@@ -112,7 +112,7 @@ Things to notice while it runs:
 
 - After step 3, look at `data/.index/chroma/` and `data/.index/bm25.pkl`. Two indexes, one corpus. Chapter 03 explains why.
 - In step 4, try a query with an exact identifier (`ERR_CONN_RESET`) and one with a concept ("what causes latency spikes"). Note which chunks come back. That difference is the whole argument for hybrid retrieval.
-- In step 5, reject the ticket once. Nothing should be written to `data/.drafts/`. That is the human-in-the-loop guarantee.
+- In step 5, reject the ticket once. The draft in `data/.drafts/` is marked `rejected` and nothing is filed. That is the human-in-the-loop guarantee.
 - If you have no API key yet, steps 3 and the retrieval half of step 7 still work. Set `OPS_COPILOT_EMBEDDING_PROVIDER=hashing` in `.env` to skip downloading the ONNX model too; results will be worse, which is itself instructive.
 
 ## What to read next

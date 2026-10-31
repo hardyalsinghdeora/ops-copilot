@@ -92,14 +92,14 @@ class EmbeddingProvider(Protocol):
     def embed_documents(self, texts: list[str]) -> list[list[float]]: ...
     def embed_query(self, text: str) -> list[float]: ...
 
-class LocalMiniLM:        # default: small sentence-transformer exported to ONNX, runs on CPU, no API key
-class VoyageEmbeddings:   # hosted, higher quality; needs VOYAGE_API_KEY and the `voyage` extra
-class HashingEmbeddings:  # deterministic feature hashing of tokens; no model, no download; for tests/CI
+class LocalMiniLMEmbeddings:  # default: small sentence-transformer exported to ONNX, runs on CPU, no API key
+class VoyageEmbeddings:       # hosted, higher quality; needs VOYAGE_API_KEY and the `voyage` extra
+class HashingEmbeddings:      # deterministic feature hashing of tokens; no model, no download; for tests/CI
 ```
 
 | Provider | When | Trade-off |
 |---|---|---|
-| `LocalMiniLM` (ONNX) | Default. Laptop, demo, small corpus | Free, offline, decent. Weaker on long or very technical passages. |
+| `LocalMiniLMEmbeddings` (ONNX) | Default. Laptop, demo, small corpus | Free, offline, decent. Weaker on long or very technical passages. |
 | `VoyageEmbeddings` | When quality matters and you have a key | Better recall, especially on code-heavy text. Network, cost, data leaves the machine. |
 | `HashingEmbeddings` | Tests and CI | Deterministic and instant. Not semantic at all; it is a bag-of-words projection. It exists so the pipeline can be tested without a model. |
 

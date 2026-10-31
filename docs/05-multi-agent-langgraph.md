@@ -134,7 +134,7 @@ def node(state: CopilotState):
     return {"pending_action": None, "messages": [("system", note)]}
 ```
 
-The CLI sees the interrupt payload, prints the draft, asks `Approve? [y/N]`, and resumes with `Command(resume={"approved": True})` or `False`. Nothing is written until that resume. See [`adr/0004-human-in-the-loop-side-effects.md`](adr/0004-human-in-the-loop-side-effects.md).
+The CLI sees the interrupt payload, prints the draft, asks `Approve? [y/N]`, and resumes with `Command(resume={"approved": True})` or `False`. Nothing is filed until that resume: `draft_ticket` only saved a draft, which the resume marks approved or rejected. See [`adr/0004-human-in-the-loop-side-effects.md`](adr/0004-human-in-the-loop-side-effects.md).
 
 **`reviewer`** (`ops_copilot.agents.reviewer`). Below.
 
@@ -198,7 +198,7 @@ Supervisor fits here because the three tasks are disjoint and each run is one re
 
 1. **Draw the state.** Run `ops-copilot ask` with the graph's stream mode set to values (or add logging in each node) and print `route`, `attempts`, `len(evidence)` and `review` after every node. Confirm the sequence matches the request lifecycle in `architecture.md`.
 2. **Trigger a revise.** Weaken the knowledge agent's prompt (remove the "only from evidence" line) and ask something the knowledge base covers partially. Observe the reviewer's low `faithfulness` score and `feedback`, and the second attempt. Restore the prompt.
-3. **Reject a ticket.** Run `ops-copilot triage` and answer `N` at the approval prompt. Verify `data/.drafts/` is unchanged, then inspect the checkpointer's saved state for the thread to see `pending_action` cleared.
+3. **Reject a ticket.** Run `ops-copilot triage` and answer `N` at the approval prompt. Verify the draft in `data/.drafts/` now says `"status": "rejected"`, then inspect the checkpointer's saved state for the thread to see `pending_action` cleared.
 4. **Add a fourth agent (design only, then optionally build).** Specify a `status_update` agent that writes a customer-facing incident update from the triage report and recent alerts. Which tools does it need? What would the supervisor's few-shot examples look like? Where does it join the graph? Building it is the Week 4 stretch project in [`exercises.md`](exercises.md).
 
 ## Further reading
