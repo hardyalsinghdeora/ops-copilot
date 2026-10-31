@@ -3,7 +3,10 @@
 Retrieval metrics run fully offline against the on-disk index. The optional judge
 stage asks the knowledge agent each golden question and grades the answers; it needs
 an API key and takes a few minutes. Token usage and latency are recorded per question
-so prompt/model changes can be costed, not just scored.
+so prompt/model changes can be costed, not just scored. Usage covers every model call
+the copilot makes for a question (specialist, report formatter, reviewer), split by
+model because Sonnet and Haiku are priced differently; the judge's own call is eval
+overhead and is not counted.
 """
 
 from __future__ import annotations
@@ -12,6 +15,9 @@ import asyncio
 import json
 import time
 from pathlib import Path
+
+from langchain_core.callbacks import get_usage_metadata_callback
+from langchain_core.messages.ai import UsageMetadata, add_usage
 
 from ..rag.ingest import load_retriever
 from .retrieval_eval import compare_retrievers, evaluate_retrieval
@@ -41,14 +47,11 @@ def run_eval(k: int = 5, with_judge: bool = False, compare: bool = False, golden
     return report
 
 
-def _usage(messages) -> dict[str, int]:
-    """Sum token usage from AI messages (LangChain normalises this across providers)."""
-    inp = out = 0
-    for m in messages:
-        meta = getattr(m, "usage_metadata", None) or {}
-        inp += int(meta.get("input_tokens", 0))
-        out += int(meta.get("output_tokens", 0))
-    return {"input_tokens": inp, "output_tokens": out}
+def _tokens(usage_by_model: dict[str, UsageMetadata]) -> dict[str, int]:
+    return {
+        "input_tokens": sum(u["input_tokens"] for u in usage_by_model.values()),
+        "output_tokens": sum(u["output_tokens"] for u in usage_by_model.values()),
+    }
 
 
 async def _run_judge(golden: list[dict]) -> dict:
@@ -61,10 +64,16 @@ async def _run_judge(golden: list[dict]) -> dict:
     fast = get_llm("fast")
     graph = build_graph(get_llm("strong"), fast, load_local_tools())
     rows = []
+    by_model: dict[str, UsageMetadata] = {}
     for item in golden:
         t0 = time.perf_counter()
-        state = await graph.ainvoke(initial_state(item["question"], "knowledge"), thread_config(f"eval-{item['id']}"))
+        # structured-output calls (reviewer, formatter) never land in state["messages"]; a
+        # usage callback sees every model call made inside the run
+        with get_usage_metadata_callback() as usage:
+            state = await graph.ainvoke(initial_state(item["question"], "knowledge"), thread_config(f"eval-{item['id']}"))
         latency = time.perf_counter() - t0
+        for model, u in usage.usage_metadata.items():
+            by_model[model] = add_usage(by_model.get(model), u)
         answer = final_answer(state)
         js = judge_answer(fast, item["question"], answer, render_evidence(state, 20_000), item["reference_answer"])
         rows.append(
@@ -75,7 +84,7 @@ async def _run_judge(golden: list[dict]) -> dict:
                 "latency_s": round(latency, 2),
                 "tool_calls": state.get("tool_calls", 0),
                 "revisions": state.get("attempts", 0),
-                **_usage(state["messages"]),
+                **_tokens(usage.usage_metadata),
                 "answer": answer,
             }
         )
@@ -90,6 +99,7 @@ async def _run_judge(golden: list[dict]) -> dict:
         "avg_latency_s": round(sum(r["latency_s"] for r in rows) / n, 2),
         "total_input_tokens": sum(r["input_tokens"] for r in rows),
         "total_output_tokens": sum(r["output_tokens"] for r in rows),
+        "tokens_by_model": {m: _tokens({m: u}) for m, u in by_model.items()},
         "per_question": rows,
     }
 

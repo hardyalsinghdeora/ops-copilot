@@ -22,6 +22,56 @@ def test_retrieval_eval_reports_metrics_in_range(retriever):
     assert len(report["per_question"]) == report["n"]
 
 
+async def test_judge_eval_counts_tokens_of_every_copilot_model_call(local_tools, monkeypatch):
+    """Reviewer calls never land in state["messages"]; the token totals must still include them."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.runnables import RunnableLambda
+
+    from ops_copilot import llm
+    from ops_copilot.agents.state import ReviewVerdict
+    from ops_copilot.evals import run
+    from ops_copilot.evals.judge import JudgeScores
+
+    from .fakes import ScriptedChatModel
+
+    def billed(model: str, n_in: int, n_out: int, content: str = "") -> AIMessage:
+        usage = {"input_tokens": n_in, "output_tokens": n_out, "total_tokens": n_in + n_out}
+        return AIMessage(content=content, usage_metadata=usage, response_metadata={"model_name": model})
+
+    class BilledStructured(ScriptedChatModel):
+        """Like a real model, with_structured_output costs a (metered) model call."""
+
+        def with_structured_output(self, schema, **kwargs):
+            return RunnableLambda(lambda msgs: self.invoke(msgs)) | super().with_structured_output(schema)
+
+    strong = ScriptedChatModel(responses=[billed("sonnet", 100, 20, "Rotate it [rb-payments-db-credential-rotation#1].")])
+    fast = BilledStructured(
+        responses=[billed("haiku", 30, 5), billed("haiku", 400, 50)],  # reviewer, then the eval's judge
+        structured=[
+            ReviewVerdict(verdict="pass", faithfulness=5, citations_ok=True, completeness=5, feedback="ok"),
+            JudgeScores(faithfulness=5, relevance=5, reference_agreement=4, rationale="ok"),
+        ],
+    )
+    monkeypatch.setattr(llm, "get_llm", lambda role="strong": strong if role == "strong" else fast)
+    golden = [
+        {
+            "id": "q1",
+            "question": "How do I rotate the payments DB credentials?",
+            "expected_doc_ids": ["rb-payments-db-credential-rotation"],
+            "reference_answer": "Follow the rotation runbook.",
+        }
+    ]
+
+    out = await run._run_judge(golden)
+
+    assert (out["total_input_tokens"], out["total_output_tokens"]) == (130, 25)  # specialist + reviewer, not the judge
+    assert out["tokens_by_model"] == {
+        "sonnet": {"input_tokens": 100, "output_tokens": 20},
+        "haiku": {"input_tokens": 30, "output_tokens": 5},
+    }
+    assert out["faithfulness_avg"] == 5 and out["per_question"][0]["input_tokens"] == 130
+
+
 def test_api_health_and_schema():
     from fastapi.testclient import TestClient
 
