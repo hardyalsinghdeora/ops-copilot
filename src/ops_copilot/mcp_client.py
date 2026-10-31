@@ -5,6 +5,9 @@ Two modes, selected by ``tool_mode``:
 * ``"mcp"``   — spawn the two servers as stdio subprocesses through
                 ``MultiServerMCPClient`` (langchain-mcp-adapters). This is the real
                 protocol path and what you'd use with remote servers in production.
+                ``mcp_sessions()`` keeps one process per server open for the app's
+                lifetime; ``load_mcp_tools()`` is simpler but starts a fresh server
+                (index and embedding model load included, ~2.5 s) for every call.
 * ``"local"`` — wrap the very same tool functions in-process with ``StructuredTool``.
                 No subprocess, no protocol hop; used by the test-suite and handy
                 when debugging prompts. The agents cannot tell the difference —
@@ -15,9 +18,14 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Literal
+from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack, asynccontextmanager
+from typing import TYPE_CHECKING, Literal
 
 from langchain_core.tools import BaseTool, StructuredTool
+
+if TYPE_CHECKING:
+    from mcp import ClientSession
 
 ToolMode = Literal["mcp", "local"]
 
@@ -63,10 +71,32 @@ def mcp_server_config() -> dict:
 
 
 async def load_mcp_tools() -> list[BaseTool]:
+    """Stateless MCP tools: each call starts its own server process. Fine for a script;
+    a long-running app should use ``mcp_sessions()``."""
     from langchain_mcp_adapters.client import MultiServerMCPClient
 
     client = MultiServerMCPClient(mcp_server_config())
     return await client.get_tools()
+
+
+@asynccontextmanager
+async def mcp_sessions() -> AsyncIterator[dict[str, ClientSession]]:
+    """Start each MCP server once and keep its stdio session open until the block exits."""
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+
+    client = MultiServerMCPClient(mcp_server_config())
+    async with AsyncExitStack() as stack:
+        yield {name: await stack.enter_async_context(client.session(name)) for name in client.connections}
+
+
+async def tools_from_sessions(sessions: dict[str, ClientSession]) -> list[BaseTool]:
+    """LangChain tools that call through the given open sessions."""
+    from langchain_mcp_adapters.tools import load_mcp_tools as tools_for_session
+
+    tools: list[BaseTool] = []
+    for name, session in sessions.items():
+        tools += await tools_for_session(session, server_name=name)
+    return tools
 
 
 def load_local_tools() -> list[BaseTool]:
@@ -76,10 +106,6 @@ def load_local_tools() -> list[BaseTool]:
     for fn in [*knowledge_server.TOOLS, *ops_server.TOOLS]:
         tools.append(StructuredTool.from_function(fn, name=fn.__name__, description=fn.__doc__ or fn.__name__))
     return tools
-
-
-async def load_tools(mode: ToolMode = "mcp") -> list[BaseTool]:
-    return await load_mcp_tools() if mode == "mcp" else load_local_tools()
 
 
 def split_tools(tools: list[BaseTool]) -> tuple[list[BaseTool], list[BaseTool]]:

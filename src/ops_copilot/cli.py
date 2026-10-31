@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from contextlib import AsyncExitStack
 
 import typer
 from rich.console import Console
@@ -43,29 +44,31 @@ def _print_review(state: dict) -> None:
 
 
 async def _invoke(task: str, route: str | None, tool_mode: str, auto_approve: bool | None) -> dict:
-    """One event loop for the whole run: building the graph, invoking it and resuming it."""
+    """One event loop for the whole run: starting the tool servers, invoking the graph and resuming it."""
     from langgraph.types import Command
 
     from .agents import initial_state, thread_config
-    from .runtime import get_graph_async
+    from .runtime import open_copilot
 
-    try:
-        graph = await get_graph_async(tool_mode)  # type: ignore[arg-type]
-    except RuntimeError as e:  # e.g. missing ANTHROPIC_API_KEY — one clear line, not a traceback
-        console.print(f"[red]error:[/red] {e}")
-        raise typer.Exit(code=1) from None
-    cfg = thread_config(str(uuid.uuid4()))
-    with console.status("[bold]agents working…"):
-        state = await graph.ainvoke(initial_state(task, route), cfg)  # type: ignore[arg-type]
+    async with AsyncExitStack() as stack:
+        try:
+            copilot = await stack.enter_async_context(open_copilot(tool_mode))  # type: ignore[arg-type]
+        except RuntimeError as e:  # e.g. missing ANTHROPIC_API_KEY — one clear line, not a traceback
+            console.print(f"[red]error:[/red] {e}")
+            raise typer.Exit(code=1) from None
+        graph = copilot.graph
+        cfg = thread_config(str(uuid.uuid4()))
+        with console.status("[bold]agents working…"):
+            state = await graph.ainvoke(initial_state(task, route), cfg)  # type: ignore[arg-type]
 
-    if state.get("__interrupt__"):
-        payload = state["__interrupt__"][0].value
-        console.print(Panel(json.dumps(payload["action"], indent=2), title=payload["question"], border_style="yellow"))
-        approved = auto_approve if auto_approve is not None else typer.confirm("Approve?", default=False)
-        comment = "" if auto_approve is not None else typer.prompt("Comment (optional)", default="", show_default=False)
-        with console.status("[bold]resuming…"):
-            state = await graph.ainvoke(Command(resume={"approved": approved, "comment": comment}), cfg)
-    return state
+        if state.get("__interrupt__"):
+            payload = state["__interrupt__"][0].value
+            console.print(Panel(json.dumps(payload["action"], indent=2), title=payload["question"], border_style="yellow"))
+            approved = auto_approve if auto_approve is not None else typer.confirm("Approve?", default=False)
+            comment = "" if auto_approve is not None else typer.prompt("Comment (optional)", default="", show_default=False)
+            with console.status("[bold]resuming…"):
+                state = await graph.ainvoke(Command(resume={"approved": approved, "comment": comment}), cfg)
+        return state
 
 
 def _run(task: str, route: str | None, tool_mode: str, show_evidence: bool, auto_approve: bool | None) -> None:

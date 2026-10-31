@@ -4,7 +4,7 @@
     POST /triage         {"alert": "..."}                            → may return pending_approval
     POST /approve        {"thread_id": "...", "approved": true}      → resumes an interrupted run
     POST /release-notes  {"version": "2.14.0"}
-    GET  /health
+    GET  /health         503 when the MCP tool servers stop answering
 
 Each request is a LangGraph *thread*; the checkpointer stores its state so an
 interrupted triage can be resumed by a later ``/approve`` call.
@@ -16,18 +16,20 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from ..agents import final_answer, initial_state, thread_config
 from ..config import get_settings
-from ..runtime import get_graph_async
+from ..runtime import open_copilot
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.graph = await get_graph_async("mcp")
-    yield
+    async with open_copilot("mcp") as copilot:
+        app.state.copilot = copilot
+        app.state.graph = copilot.graph
+        yield
 
 
 app = FastAPI(title="Ops Copilot", version="0.1.0", lifespan=lifespan)
@@ -94,9 +96,19 @@ async def _invoke(task: str, route, thread_id: str | None) -> CopilotResponse:
 
 
 @app.get("/health")
-async def health() -> dict:
+async def health(response: Response) -> dict:
     s = get_settings()
-    return {"status": "ok", "model_strong": s.model_strong, "model_fast": s.model_fast, "index_present": s.bm25_path.exists()}
+    copilot = getattr(app.state, "copilot", None)
+    tools_ok = await copilot.tools_healthy() if copilot else None
+    if tools_ok is False:
+        response.status_code = 503  # lets the host restart a service whose tool servers died
+    return {
+        "status": "degraded" if tools_ok is False else "ok",
+        "tools_ok": tools_ok,
+        "model_strong": s.model_strong,
+        "model_fast": s.model_fast,
+        "index_present": s.bm25_path.exists(),
+    }
 
 
 @app.post("/chat", response_model=CopilotResponse)

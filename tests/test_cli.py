@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from contextlib import asynccontextmanager
 
 from langchain_core.messages import AIMessage
 from typer.testing import CliRunner
@@ -22,10 +23,11 @@ PASS = ReviewVerdict(verdict="pass", faithfulness=5, citations_ok=True, complete
 def _use_graph(monkeypatch, strong, fast, tools) -> None:
     graph = build_graph(strong, fast, tools)
 
-    async def scripted_graph(tool_mode="mcp"):
-        return graph
+    @asynccontextmanager
+    async def scripted_copilot(tool_mode="mcp"):
+        yield runtime.Copilot(graph)
 
-    monkeypatch.setattr(runtime, "get_graph_async", scripted_graph)
+    monkeypatch.setattr(runtime, "open_copilot", scripted_copilot)
 
 
 def test_release_notes_end_to_end(local_tools, monkeypatch):

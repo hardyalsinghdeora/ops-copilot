@@ -124,3 +124,18 @@ def test_api_triage_approval_flow_blocks_new_turns_while_pending(local_tools, mo
     done = client.post("/approve", json={"thread_id": thread_id, "approved": False})
     assert done.status_code == 200 and "REJECTED" in done.json()["answer"]
     assert client.post("/approve", json={"thread_id": thread_id, "approved": True}).status_code == 409
+
+
+def test_health_is_503_when_the_tool_servers_stop_answering(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from ops_copilot.api import main as api
+
+    class DeadTools:
+        async def tools_healthy(self) -> bool:
+            return False
+
+    monkeypatch.setattr(api.app.state, "copilot", DeadTools(), raising=False)
+    resp = TestClient(api.app).get("/health")
+    assert resp.status_code == 503
+    assert resp.json()["status"] == "degraded" and resp.json()["tools_ok"] is False

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
+from pathlib import Path
 
 import pytest
 
@@ -118,6 +121,53 @@ async def test_mcp_over_stdio_round_trip(tmp_path, monkeypatch):
     result = await search.ainvoke({"query": "jwt signing key rotation", "k": 2})
     text = result if isinstance(result, str) else "".join(b.get("text", "") for b in result)
     assert "auth" in text.lower()
+    get_settings.cache_clear()
+
+
+def _mcp_server_pids() -> dict[str, int]:
+    """MCP server processes started by this test process, keyed by server module."""
+    pids = {}
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            ppid = int((proc / "stat").read_text().rsplit(")", 1)[1].split()[1])
+            cmdline = (proc / "cmdline").read_bytes().decode()
+        except (OSError, IndexError, ValueError):
+            continue
+        if ppid == os.getpid() and "ops_copilot.mcp_servers." in cmdline:
+            pids[cmdline.split("ops_copilot.mcp_servers.")[1].split("\x00")[0]] = int(proc.name)
+    return pids
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not Path("/proc/self/stat").exists(), reason="reads child processes from /proc")
+async def test_open_copilot_reuses_one_process_per_mcp_server(tmp_path, monkeypatch):
+    """Tool calls go through long-lived sessions (not a fresh server per call), and the
+    health probe notices when a server dies."""
+    from ops_copilot import runtime
+    from ops_copilot.config import get_settings
+    from ops_copilot.mcp_client import tools_from_sessions
+    from ops_copilot.rag import ingest
+
+    from .fakes import ScriptedChatModel
+
+    monkeypatch.setenv("OPS_COPILOT_INDEX_DIR", str(tmp_path / "idx"))
+    get_settings.cache_clear()
+    ingest()
+    monkeypatch.setattr(runtime, "get_llm", lambda role="strong": ScriptedChatModel())
+
+    async with runtime.open_copilot("mcp") as copilot:
+        servers = _mcp_server_pids()
+        assert set(servers) == {"knowledge_server", "ops_server"}
+        search = next(t for t in await tools_from_sessions(copilot.sessions) if t.name == "search_knowledge")
+        for query in ["payments p99 latency", "kafka consumer lag", "jwt rotation"]:
+            assert await search.ainvoke({"query": query, "k": 1})
+        assert _mcp_server_pids() == servers  # same two processes served every call
+        assert await copilot.tools_healthy()
+
+        os.kill(servers["knowledge_server"], signal.SIGKILL)
+        assert not await copilot.tools_healthy(timeout=2)
     get_settings.cache_clear()
 
 
