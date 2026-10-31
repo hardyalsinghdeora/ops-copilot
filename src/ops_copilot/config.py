@@ -6,6 +6,7 @@ via pydantic-settings, so the same code runs in a laptop, CI, or a container.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -13,7 +14,23 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+def project_root(module_file: Path = Path(__file__)) -> Path:
+    """Directory holding ``data/`` and ``.env``.
+
+    ``OPS_COPILOT_ROOT`` wins. Otherwise the source checkout this module lives in (running
+    from the repo, or an editable install). Otherwise the current directory: a regular
+    ``pip install`` puts the code in site-packages, away from the data.
+    """
+    if root := os.environ.get("OPS_COPILOT_ROOT"):
+        return Path(root).resolve()
+    checkout = module_file.resolve().parents[2]
+    if (checkout / "src" / "ops_copilot").is_dir():
+        return checkout
+    return Path.cwd()
+
+
+REPO_ROOT = project_root()
 
 EmbeddingProviderName = Literal["local", "voyage", "hashing"]
 

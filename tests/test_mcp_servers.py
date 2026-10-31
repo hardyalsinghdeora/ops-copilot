@@ -86,6 +86,7 @@ def test_mcp_servers_do_not_receive_the_anthropic_key(monkeypatch):
     for server in mcp_server_config().values():
         assert "ANTHROPIC_API_KEY" not in server["env"]
         assert server["env"]["VOYAGE_API_KEY"] == "pa-test"  # the knowledge server may embed with Voyage
+        assert server["env"]["OPS_COPILOT_ROOT"]  # servers find data/ whatever cwd the host uses
 
 
 def test_local_tools_mirror_mcp_tools(local_tools):

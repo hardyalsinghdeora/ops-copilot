@@ -29,13 +29,18 @@ def _server_env() -> dict[str, str]:
     """MCP stdio clients start servers with a *minimal* environment on purpose (least
     privilege). Forward only what our servers need: settings, the embedding key, import path.
     The servers never call Claude, so ANTHROPIC_API_KEY stays with the agents."""
+    from .config import REPO_ROOT
+
     keep_prefixes = ("OPS_COPILOT_",)
     keep_exact = {"VOYAGE_API_KEY", "PYTHONPATH", "PATH", "HOME", "VIRTUAL_ENV"}
-    return {
+    env = {
         k: v
         for k, v in os.environ.items()
         if k in keep_exact or k.startswith(keep_prefixes)
     }
+    # pin the data directory: a host such as Claude Desktop starts the server in its own cwd
+    env.setdefault("OPS_COPILOT_ROOT", str(REPO_ROOT))
+    return env
 
 
 def mcp_server_config() -> dict:
