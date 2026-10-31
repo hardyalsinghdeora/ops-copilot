@@ -56,7 +56,7 @@ def build_reviewer(llm: BaseChatModel, max_rounds: int = 2):
 def after_review(state: CopilotState) -> str:
     """Conditional edge: retry the specialist, pause for approval, or finish."""
     review = state.get("review") or {}
-    if review.get("verdict") == "revise" and "final" not in state:
+    if review.get("verdict") == "revise" and not state.get("final"):
         return "retry"
     if state.get("pending_action"):
         return "approval"

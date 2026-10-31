@@ -108,3 +108,40 @@ async def test_mcp_over_stdio_round_trip(tmp_path, monkeypatch):
     text = result if isinstance(result, str) else "".join(b.get("text", "") for b in result)
     assert "auth" in text.lower()
     get_settings.cache_clear()
+
+
+@pytest.mark.slow
+async def test_graph_calls_mcp_tools(tmp_path, monkeypatch):
+    """The CLI/API default: a specialist calls the async-only MCP tools from inside the graph."""
+    from langchain_core.messages import AIMessage
+
+    from ops_copilot.agents import build_graph, initial_state, thread_config
+    from ops_copilot.agents.state import ReviewVerdict
+    from ops_copilot.config import get_settings
+    from ops_copilot.mcp_client import load_mcp_tools
+    from ops_copilot.rag import ingest
+
+    from .fakes import ScriptedChatModel
+
+    monkeypatch.setenv("OPS_COPILOT_INDEX_DIR", str(tmp_path / "idx"))
+    get_settings.cache_clear()
+    ingest()
+    strong = ScriptedChatModel(
+        responses=[
+            AIMessage(
+                content="",
+                tool_calls=[{"id": "c1", "name": "search_knowledge", "args": {"query": "jwt signing key rotation", "k": 2}}],
+            ),
+            AIMessage(content="answer"),
+        ]
+    )
+    fast = ScriptedChatModel(
+        structured=[ReviewVerdict(verdict="pass", faithfulness=5, citations_ok=True, completeness=5, feedback="ok")]
+    )
+    g = build_graph(strong, fast, await load_mcp_tools())
+    out = await g.ainvoke(initial_state("How do I rotate the JWT signing key?", route="knowledge"), thread_config("mcp"))
+
+    content = out["evidence"][0]["content"]
+    assert not content.startswith("Error"), content
+    assert json.loads(content) and "auth" in content.lower()
+    get_settings.cache_clear()

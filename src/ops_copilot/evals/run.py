@@ -8,6 +8,7 @@ so prompt/model changes can be costed, not just scored.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from pathlib import Path
@@ -36,7 +37,7 @@ def run_eval(k: int = 5, with_judge: bool = False, compare: bool = False, golden
     if compare:
         report["compare"] = compare_retrievers(retriever, golden, k)
     if with_judge:
-        report["judge"] = _run_judge(golden)
+        report["judge"] = asyncio.run(_run_judge(golden))
     return report
 
 
@@ -50,7 +51,7 @@ def _usage(messages) -> dict[str, int]:
     return {"input_tokens": inp, "output_tokens": out}
 
 
-def _run_judge(golden: list[dict]) -> dict:
+async def _run_judge(golden: list[dict]) -> dict:
     from ..agents import build_graph, final_answer, initial_state, thread_config
     from ..agents.reviewer import render_evidence
     from ..llm import get_llm
@@ -62,7 +63,7 @@ def _run_judge(golden: list[dict]) -> dict:
     rows = []
     for item in golden:
         t0 = time.perf_counter()
-        state = graph.invoke(initial_state(item["question"], "knowledge"), thread_config(f"eval-{item['id']}"))
+        state = await graph.ainvoke(initial_state(item["question"], "knowledge"), thread_config(f"eval-{item['id']}"))
         latency = time.perf_counter() - t0
         answer = final_answer(state)
         js = judge_answer(fast, item["question"], answer, render_evidence(state, 20_000), item["reference_answer"])

@@ -17,7 +17,7 @@ def _tc(name, args, cid="c1"):
     return {"id": cid, "name": name, "args": args}
 
 
-def test_supervisor_routes_and_knowledge_agent_cites(local_tools):
+async def test_supervisor_routes_and_knowledge_agent_cites(local_tools):
     strong = ScriptedChatModel(
         responses=[
             AIMessage(content="", tool_calls=[_tc("search_knowledge", {"query": "rotate payments db credentials", "k": 3})]),
@@ -31,7 +31,7 @@ def test_supervisor_routes_and_knowledge_agent_cites(local_tools):
         ]
     )
     g = build_graph(strong, fast, local_tools)
-    out = g.invoke(initial_state("How do I rotate the payments DB credentials?"), thread_config("k1"))
+    out = await g.ainvoke(initial_state("How do I rotate the payments DB credentials?"), thread_config("k1"))
 
     assert out["route"] == "knowledge"
     assert [e["tool"] for e in out["evidence"]] == ["search_knowledge"]
@@ -43,7 +43,7 @@ def test_supervisor_routes_and_knowledge_agent_cites(local_tools):
     assert "Knowledge specialist" in sys_prompt
 
 
-def test_reviewer_revise_loop_then_pass_without_duplicating_evidence(local_tools):
+async def test_reviewer_revise_loop_then_pass_without_duplicating_evidence(local_tools):
     strong = ScriptedChatModel(
         responses=[
             AIMessage(content="", tool_calls=[_tc("search_knowledge", {"query": "kafka lag", "k": 2})]),
@@ -59,7 +59,7 @@ def test_reviewer_revise_loop_then_pass_without_duplicating_evidence(local_tools
         ]
     )
     g = build_graph(strong, fast, local_tools, max_review_rounds=2)
-    out = g.invoke(initial_state("assessment engine consumer lag, what do I do?"), thread_config("r1"))
+    out = await g.ainvoke(initial_state("assessment engine consumer lag, what do I do?"), thread_config("r1"))
 
     assert out["attempts"] == 1
     assert [e["tool"] for e in out["evidence"]] == ["search_knowledge"]  # not duplicated by the retry
@@ -67,7 +67,7 @@ def test_reviewer_revise_loop_then_pass_without_duplicating_evidence(local_tools
     assert final_answer(out).startswith("Scale consumers per the runbook")
 
 
-def test_review_rounds_are_capped(local_tools):
+async def test_review_rounds_are_capped(local_tools):
     strong = ScriptedChatModel(responses=[AIMessage(content="draft v1"), AIMessage(content="draft v2")])
     fast = ScriptedChatModel(
         structured=[
@@ -77,13 +77,13 @@ def test_review_rounds_are_capped(local_tools):
         ]
     )
     g = build_graph(strong, fast, local_tools, max_review_rounds=1)
-    out = g.invoke(initial_state("anything"), thread_config("cap"))
+    out = await g.ainvoke(initial_state("anything"), thread_config("cap"))
     assert out["attempts"] == 1
     assert "max revision rounds" in out["review"]["note"]
     assert final_answer(out) == "draft v2"
 
 
-def test_tool_budget_forces_final_answer(local_tools):
+async def test_tool_budget_forces_final_answer(local_tools):
     strong = ScriptedChatModel(
         responses=[
             AIMessage(content="", tool_calls=[_tc("list_documents", {})]),
@@ -95,13 +95,16 @@ def test_tool_budget_forces_final_answer(local_tools):
         structured=[RouteDecision(route="knowledge", reason="q"), ReviewVerdict(verdict="pass", faithfulness=4, citations_ok=True, completeness=3, feedback="ok")]
     )
     g = build_graph(strong, fast, local_tools, max_tool_calls=2)
-    out = g.invoke(initial_state("list everything"), thread_config("budget"))
+    out = await g.ainvoke(initial_state("list everything"), thread_config("budget"))
     assert out["tool_calls"] == 2
     assert final_answer(out) == "Final from evidence."
     assert "Tool budget exhausted" in strong.calls[-1][-1].content
+    # tools stay declared on the forced-answer call (the history holds tool_use blocks); none may be called
+    assert strong.call_kwargs[-1] == {"tool_choice": {"type": "none"}}
+    assert "tool_choice" not in strong.call_kwargs[0]
 
 
-def test_triage_interrupts_for_ticket_approval_and_resumes(local_tools):
+async def test_triage_interrupts_for_ticket_approval_and_resumes(local_tools):
     strong = ScriptedChatModel(
         responses=[
             AIMessage(
@@ -131,17 +134,55 @@ def test_triage_interrupts_for_ticket_approval_and_resumes(local_tools):
     g = build_graph(strong, fast, local_tools)
     cfg = thread_config("t1")
 
-    paused = g.invoke(initial_state("PagerDuty: payments-api p99 > 2s", route="triage"), cfg)
+    paused = await g.ainvoke(initial_state("PagerDuty: payments-api p99 > 2s", route="triage"), cfg)
     assert paused["route"] == "triage"  # route pre-set → supervisor skipped (no RouteDecision consumed)
     assert paused["pending_action"]["type"] == "file_ticket"
     assert paused["report"]["severity"] == "SEV2"  # typed TriageReport captured
     assert paused["draft"].startswith("## Severity\n**SEV2**")  # rendered for humans/reviewer
     assert paused["__interrupt__"][0].value["question"].startswith("Approve")
 
-    done = g.invoke(Command(resume={"approved": False, "comment": "duplicate of NAV-4821"}), cfg)
+    done = await g.ainvoke(Command(resume={"approved": False, "comment": "duplicate of NAV-4821"}), cfg)
     assert done["approval"] == {"approved": False, "comment": "duplicate of NAV-4821"}
     assert "REJECTED" in final_answer(done) and "duplicate of NAV-4821" in final_answer(done)
     assert done["pending_action"] is None
+
+
+async def test_new_turn_on_same_thread_starts_clean(local_tools):
+    """A reused thread_id (POST /chat with thread_id) is re-routed and inherits neither the
+    previous turn's answer, its evidence, nor its already-approved ticket."""
+    strong = ScriptedChatModel(
+        responses=[
+            AIMessage(content="", tool_calls=[_tc("draft_ticket", {"summary": "s", "description": "d", "service_id": "payments-api"})]),
+            AIMessage(content="triage done"),
+            AIMessage(content="", tool_calls=[_tc("search_knowledge", {"query": "rotate payments db credentials", "k": 2}, "c2")]),
+            AIMessage(content="turn 2, first draft"),
+            AIMessage(content="turn 2, revised [rb-payments-db-credential-rotation#1]"),
+        ],
+        structured=[
+            TriageReport(severity="SEV3", severity_rationale="r", what_we_know=["x"], suspected_cause="c", next_actions=["a"])
+        ],
+    )
+    fast = ScriptedChatModel(
+        structured=[
+            ReviewVerdict(verdict="pass", faithfulness=5, citations_ok=True, completeness=5, feedback="ok"),
+            RouteDecision(route="knowledge", reason="procedure question"),
+            ReviewVerdict(verdict="revise", faithfulness=2, citations_ok=False, completeness=3, feedback="cite the runbook"),
+            ReviewVerdict(verdict="pass", faithfulness=5, citations_ok=True, completeness=5, feedback="ok"),
+        ]
+    )
+    g = build_graph(strong, fast, local_tools)
+    cfg = thread_config("reused")
+    await g.ainvoke(initial_state("payments-api is down", route="triage"), cfg)
+    await g.ainvoke(Command(resume={"approved": True}), cfg)
+
+    out = await g.ainvoke(initial_state("How do I rotate the payments DB credentials?"), cfg)
+
+    assert out["route"] == "knowledge"
+    assert "__interrupt__" not in out and out["pending_action"] is None
+    assert [e["tool"] for e in out["evidence"]] == ["search_knowledge"]
+    assert out["attempts"] == 1 and out["report"] is None
+    assert final_answer(out) == "turn 2, revised [rb-payments-db-credential-rotation#1]"
+    assert not fast._structured  # routing and the revise loop both ran on turn 2
 
 
 def test_release_agent_cannot_draft_tickets(local_tools):

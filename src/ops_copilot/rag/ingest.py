@@ -56,6 +56,13 @@ def load_retriever(settings: Settings | None = None, embeddings: EmbeddingProvid
         )
     embeddings = embeddings or get_embeddings()
     store = ChromaStore(s.chroma_dir, embeddings)
+    if store.embedding_provider and store.embedding_provider != embeddings.name:
+        # vectors from different providers are not comparable (nor the same size)
+        raise RuntimeError(
+            f"The index at {s.index_dir} was built with '{store.embedding_provider}' embeddings but "
+            f"the embedding provider is now '{embeddings.name}'. Re-run `ops-copilot ingest`, or set "
+            f"OPS_COPILOT_EMBEDDING_PROVIDER={store.embedding_provider}."
+        )
     return HybridRetriever(store, BM25Index.load(s.bm25_path), s.bm25_weight, s.vector_weight)
 
 

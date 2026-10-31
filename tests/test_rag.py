@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import pytest
+
+from ops_copilot.config import Settings
 from ops_copilot.rag import (
     Chunk,
     Document,
     HashingEmbeddings,
     RetrievedChunk,
     chunk_document,
+    ingest,
     load_knowledge_base,
+    load_retriever,
     reciprocal_rank_fusion,
 )
 from ops_copilot.rag.loader import parse_front_matter
@@ -87,3 +92,15 @@ def test_document_helpers(retriever):
     full = retriever.get_document(docs[0]["id"])
     assert full and full.startswith("# ") and f"[{docs[0]['id']}#0]" in full
     assert retriever.get_document("nope") is None
+
+
+def test_index_refuses_a_different_embedding_provider(tmp_path):
+    settings = Settings(index_dir=tmp_path / "idx")
+    ingest(KB_DIR, settings, HashingEmbeddings())
+    assert load_retriever(settings, HashingEmbeddings()).search("kafka consumer lag", k=1)
+
+    class LocalNamedEmbeddings(HashingEmbeddings):
+        name = "local"
+
+    with pytest.raises(RuntimeError, match="built with 'hashing'"):
+        load_retriever(settings, LocalNamedEmbeddings())

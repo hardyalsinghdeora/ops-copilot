@@ -84,8 +84,11 @@ def _to_response(thread_id: str, state: dict) -> CopilotResponse:
 
 
 async def _invoke(task: str, route, thread_id: str | None) -> CopilotResponse:
-    thread_id = thread_id or str(uuid.uuid4())
     graph = app.state.graph
+    if thread_id and (await graph.aget_state(thread_config(thread_id))).next:
+        # a new turn would silently abandon the drafted ticket the human has not answered yet
+        raise HTTPException(status_code=409, detail="Thread is awaiting approval; call /approve first")
+    thread_id = thread_id or str(uuid.uuid4())
     state = await graph.ainvoke(initial_state(task, route), thread_config(thread_id))
     return _to_response(thread_id, state)
 

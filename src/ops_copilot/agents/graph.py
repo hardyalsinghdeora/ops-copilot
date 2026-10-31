@@ -8,6 +8,9 @@
 ``build_graph`` takes the LLMs and tools as parameters. That makes it trivial to run
 with fake models in tests, with Haiku everywhere for cheap experiments, or with the
 in-process ``local`` tools instead of MCP subprocesses.
+
+The specialist nodes are async (MCP tools are async-only), so run the compiled graph
+with ``ainvoke`` / ``astream``.
 """
 
 from __future__ import annotations
@@ -72,10 +75,23 @@ def build_graph(
 
 
 def initial_state(task: str, route: Route | None = None) -> CopilotState:
-    state: CopilotState = {"messages": [HumanMessage(content=task)], "task": task, "attempts": 0, "tool_calls": 0}
-    if route:
-        state["route"] = route
-    return state
+    """Input for one turn. Every per-turn key is reset so a reused ``thread_id`` starts
+    clean (fresh routing, no stale answer or pending ticket); only ``messages`` carries over."""
+    return {
+        "messages": [HumanMessage(content=task)],
+        "task": task,
+        "route": route,
+        "route_reason": "",
+        "evidence": None,  # type: ignore[typeddict-item]  # merge_evidence: None clears the list
+        "tool_calls": 0,
+        "draft": "",
+        "review": None,
+        "attempts": 0,
+        "report": None,
+        "pending_action": None,
+        "approval": None,
+        "final": "",
+    }
 
 
 def thread_config(thread_id: str) -> dict:

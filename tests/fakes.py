@@ -25,6 +25,7 @@ class ScriptedChatModel(BaseChatModel):
     responses: list[AIMessage] = []
     structured: list[Any] = []
     calls: list[list[BaseMessage]] = []
+    call_kwargs: list[dict[str, Any]] = []  # per call, e.g. the tool_choice bound via bind_tools
 
     def model_post_init(self, __context: Any) -> None:
         self._responses = deque(self.responses)
@@ -42,12 +43,13 @@ class ScriptedChatModel(BaseChatModel):
         **kwargs: Any,
     ) -> ChatResult:
         self.calls.append(messages)
+        self.call_kwargs.append(kwargs)
         if not self._responses:
             raise AssertionError("ScriptedChatModel ran out of scripted responses")
         return ChatResult(generations=[ChatGeneration(message=self._responses.popleft())])
 
     def bind_tools(self, tools, **kwargs):
-        return self
+        return self.bind(**kwargs) if kwargs else self
 
     def with_structured_output(self, schema, **kwargs):
         def _next(_input):

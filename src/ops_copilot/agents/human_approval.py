@@ -2,7 +2,7 @@
 
 ``interrupt()`` pauses the graph and surfaces a payload to the caller (CLI / API).
 The run is checkpointed; the caller later resumes it with
-``graph.invoke(Command(resume={...}), config)`` and execution continues *inside this
+``graph.ainvoke(Command(resume={...}), config)`` and execution continues *inside this
 node* with the human's answer. Nothing leaves the system without that answer.
 """
 

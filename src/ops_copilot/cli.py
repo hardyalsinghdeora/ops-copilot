@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 
@@ -41,20 +42,21 @@ def _print_review(state: dict) -> None:
         console.print(f"[yellow]{review['note']}[/yellow]")
 
 
-def _run(task: str, route: str | None, tool_mode: str, show_evidence: bool, auto_approve: bool | None) -> None:
+async def _invoke(task: str, route: str | None, tool_mode: str, auto_approve: bool | None) -> dict:
+    """One event loop for the whole run: building the graph, invoking it and resuming it."""
     from langgraph.types import Command
 
-    from .agents import final_answer, initial_state, thread_config
-    from .runtime import get_graph
+    from .agents import initial_state, thread_config
+    from .runtime import get_graph_async
 
     try:
-        graph = get_graph(tool_mode)  # type: ignore[arg-type]
+        graph = await get_graph_async(tool_mode)  # type: ignore[arg-type]
     except RuntimeError as e:  # e.g. missing ANTHROPIC_API_KEY — one clear line, not a traceback
         console.print(f"[red]error:[/red] {e}")
         raise typer.Exit(code=1) from None
     cfg = thread_config(str(uuid.uuid4()))
     with console.status("[bold]agents working…"):
-        state = graph.invoke(initial_state(task, route), cfg)  # type: ignore[arg-type]
+        state = await graph.ainvoke(initial_state(task, route), cfg)  # type: ignore[arg-type]
 
     if state.get("__interrupt__"):
         payload = state["__interrupt__"][0].value
@@ -62,8 +64,14 @@ def _run(task: str, route: str | None, tool_mode: str, show_evidence: bool, auto
         approved = auto_approve if auto_approve is not None else typer.confirm("Approve?", default=False)
         comment = "" if auto_approve is not None else typer.prompt("Comment (optional)", default="", show_default=False)
         with console.status("[bold]resuming…"):
-            state = graph.invoke(Command(resume={"approved": approved, "comment": comment}), cfg)
+            state = await graph.ainvoke(Command(resume={"approved": approved, "comment": comment}), cfg)
+    return state
 
+
+def _run(task: str, route: str | None, tool_mode: str, show_evidence: bool, auto_approve: bool | None) -> None:
+    from .agents import final_answer
+
+    state = asyncio.run(_invoke(task, route, tool_mode, auto_approve))
     console.print(Panel(Markdown(final_answer(state)), title=f"route: {state.get('route')} — {state.get('route_reason', '')}"))
     _print_review(state)
     if show_evidence:

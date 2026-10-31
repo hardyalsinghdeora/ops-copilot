@@ -11,6 +11,9 @@ Compared to ``langgraph.prebuilt.create_react_agent`` this is ~60 lines you can 
 and it adds two things every production agent needs: a *tool-call budget* (so a
 confused model cannot loop forever) and *evidence capture* (every tool result is
 copied into ``state.evidence`` for the reviewer).
+
+The nodes are async because tools loaded over MCP (``langchain-mcp-adapters``) only
+implement async invocation; run the parent graph with ``ainvoke``.
 """
 
 from __future__ import annotations
@@ -63,10 +66,14 @@ def build_specialist(
     """
 
     llm_with_tools = llm.bind_tools(tools) if tools else llm
+    # Once the budget is spent the tools stay declared (Anthropic rejects a request whose
+    # history holds tool_use/tool_result blocks but declares no tools); tool_choice "none"
+    # is what stops further calls.
+    llm_answer_only = llm.bind_tools(tools, tool_choice={"type": "none"}) if tools else llm
     tool_node = ToolNode(tools, handle_tool_errors=True)
     formatter = llm.with_structured_output(output_schema) if output_schema else None
 
-    def reason(state: CopilotState) -> dict:
+    async def reason(state: CopilotState) -> dict:
         budget_left = max_tool_calls - state.get("tool_calls", 0)
         msgs = [SystemMessage(content=system_prompt), *state["messages"]]
         if budget_left <= 0:
@@ -75,15 +82,15 @@ def build_specialist(
                     content="Tool budget exhausted. Write your final answer now from the evidence you already have."
                 )
             )
-            response: AIMessage = llm.invoke(msgs)  # plain model: cannot call tools
+            response: AIMessage = await llm_answer_only.ainvoke(msgs)
             response.tool_calls = []
         else:
-            response = llm_with_tools.invoke(msgs)
+            response = await llm_with_tools.ainvoke(msgs)
         return {"messages": [response]}
 
-    def run_tools(state: CopilotState) -> dict:
+    async def run_tools(state: CopilotState) -> dict:
         last: AIMessage = state["messages"][-1]
-        result = tool_node.invoke({"messages": [last]})
+        result = await tool_node.ainvoke({"messages": [last]})
         tool_msgs: list[ToolMessage] = result["messages"]
         evidence: list[Evidence] = []
         by_id = {tc["id"]: tc for tc in last.tool_calls}
@@ -98,12 +105,12 @@ def build_specialist(
             "tool_calls": state.get("tool_calls", 0) + len(tool_msgs),
         }
 
-    def finish(state: CopilotState) -> dict:
+    async def finish(state: CopilotState) -> dict:
         last = state["messages"][-1]
         text = last.content if isinstance(last.content, str) else _render_tool_content(last.content)
         if formatter is None:
             return {"draft": text}
-        report: BaseModel = formatter.invoke(
+        report: BaseModel = await formatter.ainvoke(
             [
                 SystemMessage(content=FORMAT_PROMPT),
                 *state["messages"],
@@ -129,7 +136,7 @@ def build_specialist(
     g.add_edge("finish", END)
     subgraph = g.compile(name=name)
 
-    def node(state: CopilotState) -> dict:
+    async def node(state: CopilotState) -> dict:
         """Run the sub-graph and return only the *delta*.
 
         Gotcha worth knowing: if a compiled sub-graph is added directly as a node, every
@@ -139,7 +146,7 @@ def build_specialist(
         keeps the parent's list correct.
         """
         inner = {**state, "evidence": []}
-        result = subgraph.invoke(inner)
+        result = await subgraph.ainvoke(inner)
         out = {
             "messages": result["messages"][len(state["messages"]) :],
             "evidence": result.get("evidence", []),

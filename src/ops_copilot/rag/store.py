@@ -46,6 +46,11 @@ class ChromaStore:
             )
 
     # -- read --------------------------------------------------------------------
+    @property
+    def embedding_provider(self) -> str | None:
+        """Provider the collection was built with (Chroma keeps the metadata it was created with)."""
+        return (self.collection.metadata or {}).get("embedding_provider")
+
     def count(self) -> int:
         return self.collection.count()
 

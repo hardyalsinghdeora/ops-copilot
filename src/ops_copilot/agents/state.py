@@ -3,12 +3,11 @@
 LangGraph passes one state object through every node. Each node returns a *partial*
 update; keys with a reducer (``Annotated[..., reducer]``) are merged, the rest are
 overwritten. ``messages`` uses ``add_messages`` so nodes append rather than replace,
-and ``evidence`` uses ``operator.add`` so every tool result is kept for the reviewer.
+and ``evidence`` uses ``merge_evidence`` so every tool result is kept for the reviewer.
 """
 
 from __future__ import annotations
 
-import operator
 from typing import Annotated, Literal, TypedDict
 
 from langchain_core.messages import AnyMessage
@@ -24,17 +23,25 @@ class Evidence(TypedDict):
     content: str
 
 
+def merge_evidence(current: list[Evidence] | None, update: list[Evidence] | None) -> list[Evidence]:
+    """Append tool results. ``None`` clears the list: ``initial_state`` sends it so a new
+    turn on an existing thread does not inherit the previous turn's evidence."""
+    if update is None:
+        return []
+    return (current or []) + update
+
+
 class CopilotState(TypedDict, total=False):
     messages: Annotated[list[AnyMessage], add_messages]
     task: str
-    route: Route
+    route: Route | None
     route_reason: str
-    evidence: Annotated[list[Evidence], operator.add]
+    evidence: Annotated[list[Evidence], merge_evidence]
     tool_calls: int
     draft: str
-    review: dict
+    review: dict | None
     attempts: int
-    report: dict  # typed specialist output (e.g. TriageReport.model_dump()), when the specialist has a schema
+    report: dict | None  # typed specialist output (e.g. TriageReport.model_dump()), when the specialist has a schema
     pending_action: dict | None
     approval: dict | None
     final: str
