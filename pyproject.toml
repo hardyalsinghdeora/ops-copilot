@@ -40,7 +40,7 @@ ops-copilot = "ops_copilot.cli:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-ops_copilot = ["evals/golden.json"]
+ops_copilot = ["evals/golden.json", "api/static/*.html"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

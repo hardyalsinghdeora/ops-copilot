@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ops Copilot</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --text: #1b1f24; --muted: #5d6673; --line: #dde1e6;
+    --accent: #2f5bd3; --accent-text: #ffffff; --user: #e8eefc; --ok: #1f7a4d; --warn: #9a5b00;
+    --bad: #b42318; --code: #f0f2f5; --cite: #eef2ff; --cite-text: #3446a0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418; --surface: #1a1e24; --text: #e6e9ed; --muted: #9aa4b1; --line: #2c323a;
+      --accent: #6d8dff; --accent-text: #0b1020; --user: #1f2a44; --ok: #4cc38a; --warn: #f0b35a;
+      --bad: #ff7a6e; --code: #232830; --cite: #232c47; --cite-text: #aab8ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  /* the composer is fixed to the bottom: keep scrolled-to messages above it */
+  html { scroll-padding-bottom: calc(var(--footer-h, 200px) + 16px); }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  header { border-bottom: 1px solid var(--line); background: var(--surface); }
+  header .wrap { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding-top: 14px; padding-bottom: 14px; }
+  h1 { font-size: 18px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .status { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); }
+  .token { display: flex; gap: 6px; align-items: center; }
+  input, textarea, select, button { font: inherit; color: inherit; }
+  input, textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .token input { width: 180px; padding: 5px 8px; font-size: 13px; }
+  button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: .55; cursor: default; }
+  main.wrap { padding-top: 20px; padding-bottom: calc(var(--footer-h, 200px) + 24px); }
+  .empty { color: var(--muted); text-align: center; padding: 48px 0 24px; }
+  .msg { margin: 0 0 14px; }
+  .msg.user { display: flex; justify-content: flex-end; }
+  .msg.user div { background: var(--user); padding: 9px 13px; border-radius: 12px 12px 2px 12px; max-width: 85%; white-space: pre-wrap; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; overflow-wrap: anywhere; }
+  .card h2, .card h3, .card h4, .card h5 { margin: 14px 0 6px; font-size: 15px; } .card > :first-child { margin-top: 0; }
+  .card h2 { font-size: 17px; }
+  .card p, .card ul, .card ol { margin: 6px 0; } .card ul, .card ol { padding-left: 22px; }
+  .card code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .card pre { background: var(--code); padding: 10px; border-radius: 8px; overflow-x: auto; }
+  .card pre code { padding: 0; }
+  .card hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+  .cite { background: var(--cite); color: var(--cite-text); border-radius: 4px; padding: 0 5px; font-size: 12px; white-space: nowrap; }
+  .meta { color: var(--muted); font-size: 12px; margin-top: 10px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .pass { color: var(--ok); } .revise { color: var(--warn); }
+  .error { border-color: var(--bad); color: var(--bad); }
+  .working { color: var(--muted); }
+  .approval { border: 1px solid var(--warn); }
+  .approval dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 8px 0 12px; font-size: 14px; }
+  .approval dt { color: var(--muted); }
+  .approval dd { margin: 0; white-space: pre-wrap; }
+  .approval .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .approval input { flex: 1 1 200px; }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); }
+  footer .wrap { padding-top: 10px; padding-bottom: 12px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+  .tabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .tabs .spacer { flex: 1; }
+  .examples { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .examples button { font-size: 12px; padding: 3px 9px; border-radius: 999px; color: var(--muted); }
+  form { display: flex; gap: 8px; align-items: flex-end; }
+  form textarea { flex: 1; resize: vertical; min-height: 44px; max-height: 180px; }
+  form input[name=version] { flex: 1; }
+  .hidden { display: none !important; }
+  .short { display: none; }
+  @media (max-width: 560px) {
+    /* keep the composer compact on phones: one scrollable row of examples */
+    .examples { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .examples button { flex: none; white-space: nowrap; }
+    .tabs button { padding: 5px 9px; font-size: 14px; }
+    .long { display: none; } .short { display: inline; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <h1>Ops Copilot</h1>
+      <div class="sub">Runbooks, incident triage and release notes for the Navigator platform, with cited sources.</div>
+    </div>
+    <div>
+      <div class="status" id="status"><span class="dot"></span><span>checking…</span></div>
+      <label class="token" id="token-row">
+        <span class="sub">Access token</span>
+        <input id="token" type="password" autocomplete="off" placeholder="paste token">
+      </label>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="thread" aria-live="polite">
+  <div class="empty" id="empty">Ask how to do something, paste an alert to triage, or draft release notes.<br>
+    Answers take 10–60 seconds: several agents search the runbooks and live ops data, and a reviewer checks every claim.</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="tabs" role="group" aria-label="Mode">
+      <button type="button" data-mode="ask" aria-pressed="true">Ask</button>
+      <button type="button" data-mode="triage" aria-pressed="false">Triage<span class="long"> an alert</span></button>
+      <button type="button" data-mode="release" aria-pressed="false">Release notes</button>
+      <span class="spacer"></span>
+      <button type="button" id="new"><span class="long">New conversation</span><span class="short">New</span></button>
+    </div>
+    <div class="examples" id="examples"></div>
+    <form id="form">
+      <textarea name="text" rows="2" placeholder="How do I rotate the payments DB credentials?" required></textarea>
+      <input name="version" class="hidden" placeholder="Version, e.g. 2.14.0">
+      <button class="primary" type="submit" id="send">Send</button>
+    </form>
+  </div>
+</footer>
+
+<script>
+const EXAMPLES = {
+  ask: ["How do I rotate the payments DB credentials?", "Why did we pick Kafka for assessment events?", "Who is on call for auth-service?"],
+  triage: ["PagerDuty: payments-api p99 latency > 2s since 02:10", "assessment-engine consumer lag is climbing during the exam peak"],
+  release: ["2.14.0", "2.13.0"],
+};
+const PLACEHOLDER = { ask: EXAMPLES.ask[0], triage: "Paste the alert or describe the symptom", release: "" };
+const $ = (sel) => document.querySelector(sel);
+const thread = $("#thread"), form = $("#form"), text = form.elements.text, version = form.elements.version;
+let mode = "ask", threadId = null, busy = false;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode: keep it for this tab only */ } },
+};
+$("#token").value = store.get("ops-copilot-token");
+$("#token").addEventListener("change", (e) => store.set("ops-copilot-token", e.target.value.trim()));
+
+// ---- markdown: escape first, then a small, safe subset -----------------------------
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const inline = (s) => esc(s)
+  .replace(/`([^`]+)`/g, "<code>$1</code>")
+  .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+  .replace(/\[([a-z]+-[\w.-]+#\d+)\]/g, '<span class="cite">$1</span>')
+  .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+function md(src) {
+  let html = "", list = null, para = [], code = null;
+  const flush = () => { if (para.length) { html += `<p>${inline(para.join(" "))}</p>`; para = []; } };
+  const close = () => { if (list) { html += `</${list}>`; list = null; } };
+  for (const line of String(src).replace(/\r/g, "").split("\n")) {
+    if (code) { if (/^```/.test(line)) { html += `<pre><code>${esc(code.join("\n"))}</code></pre>`; code = null; } else code.push(line); continue; }
+    let m;
+    if (/^```/.test(line)) { flush(); close(); code = []; }
+    else if ((m = line.match(/^(#{1,4})\s+(.*)$/))) { flush(); close(); const n = m[1].length + 1; html += `<h${n}>${inline(m[2])}</h${n}>`; }
+    else if ((m = line.match(/^\s*[-*]\s+(.*)$/)) || (m = line.match(/^\s*\d+[.)]\s+(.*)$/))) {
+      flush(); const tag = /^\s*\d/.test(line) ? "ol" : "ul";
+      if (list !== tag) { close(); html += `<${tag}>`; list = tag; }
+      html += `<li>${inline(m[1])}</li>`;
+    }
+    else if (/^\s*(---|\*\*\*)\s*$/.test(line)) { flush(); close(); html += "<hr>"; }
+    else if (!line.trim()) { flush(); close(); }
+    else { close(); para.push(line.trim()); }
+  }
+  if (code) html += `<pre><code>${esc(code.join("\n"))}</code></pre>`;
+  flush(); close();
+  return html;
+}
+
+// ---- thread -------------------------------------------------------------------------
+function add(cls, html) {
+  $("#empty")?.remove();
+  const el = document.createElement("div");
+  el.className = `msg ${cls}`;
+  el.innerHTML = html;
+  thread.append(el);
+  el.scrollIntoView({ behavior: "smooth", block: "end" });
+  return el;
+}
+const addUser = (s) => add("user", `<div>${esc(s)}</div>`);
+
+function meta(r) {
+  const parts = [];
+  if (r.route) parts.push(`route: ${esc(r.route.replace("_", " "))}`);
+  if (r.review) parts.push(`review: <span class="${r.review.verdict === "pass" ? "pass" : "revise"}">${esc(r.review.verdict)}</span> · faithfulness ${r.review.faithfulness}/5`);
+  parts.push(`${r.tool_calls} tool call${r.tool_calls === 1 ? "" : "s"}`);
+  if (r.revisions) parts.push(`${r.revisions} revision${r.revisions > 1 ? "s" : ""}`);
+  return `<div class="meta">${parts.map((p) => `<span>${p}</span>`).join("")}</div>`;
+}
+
+function addAnswer(r) {
+  add("bot", `<div class="card">${md(r.answer || "(no answer)")}${meta(r)}</div>`);
+  if (r.pending_approval) addApproval(r.thread_id, r.pending_approval);
+}
+
+function addApproval(tid, pending) {
+  const a = pending.action || {};
+  const rows = [["Summary", a.summary], ["Service", a.service], ["Priority", a.priority], ["Type", a.ticket_type], ["Draft", a.draft_id], ["Description", a.description]]
+    .filter(([, v]) => v).map(([k, v]) => `<dt>${k}</dt><dd>${esc(String(v))}</dd>`).join("");
+  const el = add("bot", `<div class="card approval"><strong>${esc(pending.question || "Approve this ticket?")}</strong>
+    <dl>${rows}</dl>
+    <div class="row"><input placeholder="Comment (optional)" aria-label="Comment">
+    <button class="primary" data-ok="1">Approve</button><button data-ok="0">Reject</button></div></div>`);
+  el.querySelectorAll("button").forEach((b) => b.addEventListener("click", async () => {
+    el.querySelectorAll("button, input").forEach((x) => (x.disabled = true));
+    await run("/approve", { thread_id: tid, approved: b.dataset.ok === "1", comment: el.querySelector("input").value });
+  }));
+}
+
+async function run(path, body) {
+  busy = true; $("#send").disabled = true;
+  const started = Date.now();
+  const wait = add("bot", `<div class="card working">Working… 0 s</div>`);
+  const tick = setInterval(() => { wait.firstChild.textContent = `Working… ${Math.round((Date.now() - started) / 1000)} s`; }, 1000);
+  try {
+    const token = $("#token").value.trim();
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    wait.remove();
+    if (res.status === 401) throw new Error("The access token is missing or wrong. Paste it in the box at the top.");
+    if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : `Request failed (${res.status})`);
+    if (data.thread_id && path !== "/release-notes") threadId = data.thread_id;
+    addAnswer(data);
+  } catch (err) {
+    wait.remove();
+    add("bot", `<div class="card error">${esc(err.message || String(err))}</div>`);
+  } finally {
+    clearInterval(tick); busy = false; $("#send").disabled = false;
+  }
+}
+
+// ---- composer -----------------------------------------------------------------------
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  const release = m === "release";
+  text.classList.toggle("hidden", release); text.required = !release;
+  version.classList.toggle("hidden", !release); version.required = release;
+  text.placeholder = PLACEHOLDER[m];
+  $("#examples").innerHTML = EXAMPLES[m].map((e) => `<button type="button">${esc(release ? `Release ${e}` : e)}</button>`).join("");
+  $("#examples").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => {
+    if (release) version.value = EXAMPLES.release[i]; else text.value = EXAMPLES[m][i];
+    form.requestSubmit();
+  }));
+}
+document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+$("#new").addEventListener("click", () => {
+  threadId = null;
+  thread.innerHTML = "";
+  add("note", `<div class="empty">New conversation.</div>`);
+});
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (busy) return;
+  if (mode === "release") {
+    const v = version.value.trim(); if (!v) return;
+    addUser(`Release notes for ${v}`);
+    run("/release-notes", { version: v });
+  } else {
+    const t = text.value.trim(); if (!t) return;
+    addUser(t); text.value = "";
+    run(mode === "triage" ? "/triage" : "/chat", { [mode === "triage" ? "alert" : "message"]: t, thread_id: threadId });
+  }
+});
+text.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+
+setMode("ask");
+new ResizeObserver(([e]) => document.documentElement.style.setProperty("--footer-h", `${e.target.offsetHeight}px`))
+  .observe(document.querySelector("footer"));
+fetch("/health").then((r) => r.json().then((h) => ({ ok: r.ok, h }))).then(({ ok, h }) => {
+  const s = $("#status");
+  s.innerHTML = `<span class="dot ${ok ? "ok" : "bad"}"></span><span>${ok ? "online" : "tools unavailable"} · ${esc(h.model_strong || "")}</span>`;
+  $("#token-row").classList.toggle("hidden", !h.auth_required);
+}).catch(() => { $("#status").innerHTML = `<span class="dot bad"></span><span>offline</span>`; });
+</script>
+</body>
+</html>

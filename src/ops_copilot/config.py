@@ -11,7 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -70,7 +70,9 @@ class Settings(BaseSettings):
 
     # --- API -----------------------------------------------------------------
     api_host: str = "0.0.0.0"
-    api_port: int = 8000
+    # PORT is what hosts such as Render set for the port they route traffic to
+    api_port: int = Field(default=8000, validation_alias=AliasChoices("OPS_COPILOT_API_PORT", "PORT"))
+    api_token: SecretStr | None = None  # when set, every API call needs "Authorization: Bearer <token>"
 
     @property
     def chroma_dir(self) -> Path:
