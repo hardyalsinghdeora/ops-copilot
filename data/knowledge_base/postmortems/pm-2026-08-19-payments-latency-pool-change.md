@@ -27,14 +27,14 @@ On 2026-08-19 a `payments-api` release (2.12.3) reduced the per-pod Postgres poo
 - **19:51** SEV2 declared; `#inc-20260819-payments-latency` opened; status page "Payments — degraded".
 - **19:58** Deploy identified as suspect from dashboard deploy marker.
 - **20:03** `argocd app rollback payments-api-prod 38` executed; p99 recovers to 400ms by 20:06.
-- **20:07** ArgoCD auto-sync re-applies git HEAD (2.12.3). p99 climbs again by 20:10. Team initially suspects PayGate.
+- **20:07** ArgoCD auto-sync re-applies git HEAD (2.12.3); p99 climbs again by 20:10.
 - **20:19** Rollback re-applied **with** `argocd app set payments-api-prod --sync-policy none`. Recovery by 20:23.
 - **20:40** Alert resolved after 15 minutes stable; status page updated; incident closed at 21:05.
-- **2026-08-20 11:00** Revert PR merged; `DB_POOL_MAX` restored to 40; auto-sync re-enabled.
+- **2026-08-20 11:00** Revert merged; `DB_POOL_MAX` back to 40; auto-sync re-enabled.
 
 ## Root cause
 
-Each `payments-api` pod handles ~45 concurrent in-flight requests at evening peak, most holding a connection for 30–80ms plus a PayGate round-trip of ~600ms **while still holding the connection** (the charge insert and the gateway call were inside one transaction). A pool of 10 per pod could not cover that concurrency; requests queued on `connectionTimeoutMillis` and surfaced as `Error: timeout exceeded when trying to connect`. The change had been tested in staging, which has one-tenth of the traffic.
+Each `payments-api` pod handles ~45 concurrent in-flight requests at evening peak, most holding a connection for 30–80ms plus a PayGate round-trip of ~600ms **while still holding the connection** (the charge insert and the gateway call were inside one transaction). A pool of 10 per pod could not cover that concurrency; requests queued on `connectionTimeoutMillis` and surfaced as `Error: timeout exceeded when trying to connect`. Staging, at one-tenth of production traffic, never showed it.
 
 ## Contributing factors
 
@@ -46,10 +46,9 @@ Each `payments-api` pod handles ~45 concurrent in-flight requests at evening pea
 
 ## What went well
 
-- Alert fired within 3 minutes of degradation; acknowledgement in 4.
-- Idempotency keys prevented duplicate charges despite 2,140 user retries.
-- Rollback itself took under 3 minutes each time.
-- Comms cadence (every 30 minutes) was met.
+- Alert fired within 3 minutes; acknowledged in 4.
+- Idempotency keys prevented duplicate charges despite 2,140 retries.
+- Each rollback took under 3 minutes; 30-minute comms cadence met.
 
 ## Action items
 

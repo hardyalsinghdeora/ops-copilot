@@ -30,7 +30,7 @@ On the evening of 2026-06-11, students received the "Your result is ready" push 
 - **20:38** Cause identified from the crash loop (`kubectl get pods` shows 14 restarts) and the dedupe WARNING log.
 - **20:44** `celery control cancel_consumer notify-push` stops the loop. Staging job disconnected from prod Redis; `notify-dedupe` memory drops.
 - **20:50** Memory limit raised to 1Gi; consumer resumed at **20:55**; remaining ~9k tasks deliver once.
-- **21:30** Incident closed; apology push suppressed (a second notification would have made it worse).
+- **21:30** Incident closed; no apology push sent.
 
 ## Root cause
 
@@ -41,14 +41,14 @@ Two independent faults coincided: (1) the dedupe store was unavailable and the w
 - Fail-open dedupe was a deliberate choice ("better a duplicate than a missed OTP") but was applied to **all** templates, including non-critical bulk pushes.
 - Dedupe Redis shared with a staging job through a misconfigured `NOTIFY_DEDUPE_REDIS_URL`.
 - No duplicate-send metric or alert.
-- Memory limits not re-evaluated when the FCM client changed; the deploy had no post-sync health check beyond `celery inspect ping`.
-- Result release and deploy overlapped; no freeze window for bulk sends.
+- Memory limits not re-evaluated when the FCM client changed.
+- Result release and deploy overlapped; no bulk-send freeze window.
 
 ## What went well
 
-- `cancel_consumer` gave a clean, immediate stop without purging the queue or losing legitimate notifications.
+- `cancel_consumer` stopped the loop immediately without purging legitimate notifications.
 - Email and OTP paths were unaffected.
-- Root cause found within 7 minutes of engagement thanks to the WARNING log line.
+- Root cause found within 7 minutes of engagement via the WARNING log line.
 
 ## Action items
 

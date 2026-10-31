@@ -27,12 +27,11 @@ At 00:00 UTC on 2026-07-03 (05:30 IST) the active JWT signing key `nav-2026-04` 
 - **05:51** Acknowledged. Initial hypothesis: Redis outage, because the error volume resembled the session store failure mode. 15 minutes lost checking `auth-sessions`.
 - **06:08** Log search finds `KeyExpired: kid=nav-2026-04 expired at 2026-07-03T00:00:00Z`. SEV1 declared; Anita Rao and Priya Raman paged; channel opened.
 - **06:15** Status page: `Login` major outage.
-- **06:20** Attempt to extend the expiry of the existing key by editing JWKS metadata in Vault — rejected by the verifier libraries, which honour the certificate `notAfter`, not JWKS metadata.
+- **06:20** Attempt to extend the old key's expiry via JWKS metadata fails; verifiers honour the certificate `notAfter`.
 - **06:35** New key `nav-2026-07` generated and **appended** to the JWKS; pods restarted (verification works for both kids from here).
-- **06:48** `AUTH_JWT_ACTIVE_KID=nav-2026-07` set; new logins succeed. Existing refresh tokens still fail because the stored session records reference the old kid.
+- **06:48** `AUTH_JWT_ACTIVE_KID=nav-2026-07` set; new logins succeed, but existing refresh tokens still reference the old kid.
 - **07:02** `AUTH_SESSION_EPOCH` bumped, forcing all clients to re-authenticate; mobile apps recover on next open.
 - **07:10** Error rate under 1%. **07:22** Alert resolved; status page "Resolved" at 07:30.
-- **07:45–08:00** Schools informed; postponed assessments run at 08:00.
 
 ## Root cause
 
@@ -43,14 +42,13 @@ The signing key was generated with a 90-day validity on 2026-04-04 as part of th
 - No `auth_jwt_signing_key_expiry_seconds` metric or `AuthSigningKeyExpiresSoon` alert.
 - `auth-service` did not refuse to sign with an expired key, so the failure surfaced in verifiers, not in the signer's own logs, which slowed diagnosis.
 - Runbook for key rotation did not exist; the procedure was reconstructed live (it is now `rb-auth-login-failures-jwt-key-rotation`).
-- The on-call's first hypothesis (Redis) cost 15 minutes; the alert annotation did not link to a triage order.
-- Secondary on-call was paged first because the primary had a flat phone (notification policy issue).
+- The first hypothesis (Redis) cost 15 minutes; the alert annotation had no triage order.
+- Secondary on-call was paged first because the primary's phone was off.
 
 ## What went well
 
-- The JWKS multi-key design meant appending a new key and switching `kid` needed no code change.
-- Status page and school comms were timely once SEV1 was declared.
-- Postponed assessments were run the same morning with no data loss.
+- The JWKS multi-key design meant appending a key and switching `kid` needed no code change.
+- Status page and school comms were timely once SEV1 was declared; postponed assessments ran the same morning.
 
 ## Action items
 
