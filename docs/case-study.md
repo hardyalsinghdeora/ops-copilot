@@ -48,9 +48,9 @@ Current figures: see the output of `ops-copilot eval --compare` on the committed
 
 | metric | hybrid | bm25 only | vector only |
 |---|---|---|---|
-| hit@1 | 0.467 | 0.733 | 0.333 |
-| hit@5 | 1.000 | 1.000 | 0.600 |
-| mrr   | 0.700 | 0.844 | 0.413 |
+| hit@1 | 0.562 | 0.812 | 0.250 |
+| hit@5 | 1.000 | 1.000 | 0.625 |
+| mrr   | 0.760 | 0.896 | 0.347 |
 
 BM25 alone beats the hybrid here: fusing in a noisy ranked list *hurts*. That is the correct behaviour of RRF given a bad second retriever, and it is why the comparison mode exists — the decision to run hybrid has to be re-justified per corpus and per embedding model, with the local ONNX or Voyage provider, not assumed. The interview question "why hybrid?" has the data-driven answer, including the case where the answer is "don't".
 

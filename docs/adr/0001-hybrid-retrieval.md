@@ -15,7 +15,7 @@ Dense vector retrieval handles concept queries but treats rare identifiers as lo
 
 ## Decision
 
-`ops_copilot.rag.retriever.HybridRetriever` runs both a BM25 index (`rank-bm25`, persisted to `data/.bm25.pkl`) and a vector search (`ChromaStore` at `data/.chroma`) over the same chunks, over-fetches from each, and merges the two ranked lists with **Reciprocal Rank Fusion**:
+`ops_copilot.rag.retriever.HybridRetriever` runs both a BM25 index (`rank-bm25`, persisted to `data/.index/bm25.pkl`) and a vector search (`ChromaStore` at `data/.index/chroma`) over the same chunks, over-fetches from each, and merges the two ranked lists with **Reciprocal Rank Fusion**:
 
 ```
 score(chunk) = Σ_r 1 / (k + rank_r(chunk)),   k = 60

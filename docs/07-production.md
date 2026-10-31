@@ -110,7 +110,7 @@ Adding SSE to the FastAPI service is one of the stretch projects in [`exercises.
 
 - **Container.** A Dockerfile that installs the package, bakes in the ONNX embedding model (so startup does not download), runs `ops-copilot ingest` as a build step or an init container, and starts `ops-copilot serve`. The MCP servers run as subprocesses inside the same container over stdio; that is fine until you want to share them, at which point they become their own deployments over streamable HTTP.
 - **Persistent checkpointer.** `interrupt()` with `MemorySaver` cannot survive a restart or a second replica. Use the Postgres or SQLite checkpointer from LangGraph so an approval started on one replica can resume on another.
-- **Index as an artefact.** Build `data/.chroma` and `data/.bm25.pkl` in CI, version them with the knowledge-base commit, mount them read-only. Rebuild on knowledge-base change, not on API deploy.
+- **Index as an artefact.** Build `data/.index/chroma` and `data/.index/bm25.pkl` in CI, version them with the knowledge-base commit, mount them read-only. Rebuild on knowledge-base change, not on API deploy.
 - **Health.** `GET /health` should check the index is loaded and the MCP servers respond to `tools/list`, not just that the process is up.
 - **Human approval over HTTP.** `POST /triage` returns `{"status": "awaiting_approval", "thread_id": ..., "draft": ...}`; a follow-up `POST /approve` with the thread id and decision resumes the graph with `Command(resume=...)`. In Slack this is two buttons.
 

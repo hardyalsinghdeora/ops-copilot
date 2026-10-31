@@ -18,7 +18,7 @@ Dashboard: **Reporting DB — Replication & ETL**. Channel: `#nav-data`.
 
 ## Topology
 
-`navigator-primary` (Postgres 16, `db.r6g.2xlarge`) → streaming replication, `hot_standby = on` → `navigator-replica-reporting` (`adr-004-postgres-read-replica-reporting`). The replica serves the teacher-reporting API (`/api/reports/*` in `assessment-engine`, connection string `REPORTING_DB_URL`) and the ETL. The ETL (Airflow, DAG `nav_warehouse_nightly`, schedule `0 1 * * *` IST ≈ 01:30 after the exam-day grace period) extracts the day's `assessment.attempt_scores` and `payments.charges` to the warehouse (`nav-warehouse`, columnar), ~40 minutes normally. Replica settings that matter: `max_standby_streaming_delay = 120s`, `hot_standby_feedback = on`.
+`navigator-primary` (Postgres 16, `db.r6g.2xlarge`) → streaming replication, `hot_standby = on` → `navigator-replica-reporting` (`adr-004-postgres-read-replica-reporting`). The replica serves the teacher-reporting API (`/api/reports/*` in `assessment-engine`, connection string `REPORTING_DB_URL`) and the ETL. The ETL (Airflow, DAG `nav_warehouse_nightly`, schedule `30 1 * * *` IST ≈ 01:30 after the exam-day grace period) extracts the day's `assessment.attempt_scores` and `payments.charges` to the warehouse (`nav-warehouse`, columnar), ~40 minutes normally. Replica settings that matter: `max_standby_streaming_delay = 120s`, `hot_standby_feedback = on`.
 
 ## Replication lag
 

@@ -21,37 +21,36 @@ An eval harness turns "I think the answers got better" into "hit@5 went from X t
 ```json
 [
   {
-    "id": "kb-001",
-    "question": "How do I rotate the payments DB credentials?",
-    "route": "knowledge",
-    "expected_doc_ids": ["runbook-payments-db-credentials"],
-    "reference_answer": "Run the payments-db-rotate job, then restart payments-api so it picks up the new secret. Requires the db-admin role.",
-    "tags": ["runbook", "procedure"]
+    "id": "q01",
+    "question": "payments is slow, what do I check first?",
+    "expected_doc_ids": ["rb-payments-p99-latency-spike"],
+    "reference_answer": "Check for a payments-api deployment in the last two hours and roll it back first; then check the database pool (waiting_count above 5 means saturation), PayGate latency, Postgres and traffic.",
+    "category": "runbook"
   },
   {
-    "id": "kb-017",
-    "question": "What does ERR_CONN_RESET from payments-api usually mean?",
-    "route": "knowledge",
-    "expected_doc_ids": ["postmortem-2026-06-payments-conn-reset", "runbook-payments-api-latency"],
-    "reference_answer": "...",
-    "tags": ["identifier", "postmortem"]
+    "id": "q16",
+    "question": "What does ERR_CONN_RESET from PayGate mean during webhook delivery?",
+    "expected_doc_ids": ["rb-paygate-webhook-failures-duplicate-charges"],
+    "reference_answer": "PayGate dropped the connection, usually because the handler held it past their 10s budget during a database stall; treat it like a timeout.",
+    "category": "runbook"
   },
   {
-    "id": "neg-003",
-    "question": "How do I configure the mobile push notification service?",
-    "route": "knowledge",
+    "id": "neg01",
+    "question": "How do I configure the mobile app's offline mode for students?",
     "expected_doc_ids": [],
-    "reference_answer": "Not covered in the knowledge base.",
-    "tags": ["negative"]
+    "reference_answer": "The knowledge base does not cover the mobile app; the assistant should say so and point to the service owner rather than guess.",
+    "category": "negative"
   }
 ]
 ```
+
+Fields: `id`, `question`, `expected_doc_ids` (empty for a **negative** case), `reference_answer` (short, human-written, used by the judge), `category` (`runbook` | `adr` | `postmortem` | `service` | `negative`). The committed set has 16 positive cases and 2 negatives — smaller than the thirty-to-fifty recommended below, which is exercise 1.
 
 Principles for a good golden set:
 
 - **Cover each retrieval failure mode.** Exact identifiers (where BM25 should win), paraphrased concepts (where vectors should win), questions that need two documents, questions that need a metadata filter.
 - **Include negatives.** Questions the knowledge base cannot answer. The correct behaviour is "not found", and the harness should reward that and punish an invented answer.
-- **Include one route case per agent** so misrouting is caught.
+- **Include questions phrased the way people actually ask them** ("payments is slow") as well as precise ones, so retrieval is tested on both.
 - **Keep reference answers short and factual.** They are for the judge to compare against, not model answers to imitate.
 - **Grow it from failures.** Every bug report or bad answer becomes a case.
 
@@ -85,14 +84,14 @@ def evaluate_retrieval(retriever, cases, k=5) -> dict:
     for c in cases:
         if not c["expected_doc_ids"]:
             continue                                   # negatives are scored by the judge, not here
-        got = [r.chunk.doc_id for r in retriever.retrieve(c["question"], k=k)]
+        got = [r.chunk.doc_id for r in retriever.search(c["question"], k=k)]
         first = next((i for i, d in enumerate(got, 1) if d in c["expected_doc_ids"]), None)
         hits.append(1 if first else 0)
         rr.append(1 / first if first else 0.0)
     return {"hit@k": sum(hits) / len(hits), "mrr": sum(rr) / len(rr), "k": k, "n": len(hits)}
 ```
 
-Report hit@k at more than one k (1, 3, 5) to see the shape, not just one number.
+Report hit@k at more than one k (1, 3, 5) to see the shape, not just one number. `ops-copilot eval --compare` runs the same cases through BM25-only, vector-only and hybrid (`retrieval_eval.compare_retrievers`) so the decision to fuse is backed by numbers for *this* corpus and embedding provider — with the hashing provider, for instance, BM25 alone beats hybrid, which is exactly what RRF should do with a noisy second list.
 
 ## LLM-as-judge: faithfulness and answer relevance
 
@@ -129,7 +128,7 @@ Caveats, because LLM judges have known biases (Zheng et al., 2023):
 
 ## Building the eval loop into development
 
-`ops-copilot eval` runs retrieval metrics (free, seconds) and then the judge over the full pipeline (costs model calls, minutes). Use them at different cadences:
+`ops-copilot eval` runs retrieval metrics (free, seconds); `ops-copilot eval --judge` adds the judge over the full pipeline (costs model calls, minutes). Use them at different cadences:
 
 | When | Run | Why |
 |---|---|---|

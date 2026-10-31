@@ -14,6 +14,7 @@ tags: [paygate, webhooks, idempotency, duplicate-charge, payments]
 - Alert `PaymentsDuplicateChargeDetected`: `increase(payments_api_duplicate_charge_total[1h]) > 0` — this one is `critical` and always pages, because a school being charged twice is a support escalation within the hour.
 - Support reports in `#nav-support` of "charged twice" or "paid but order shows pending".
 - Log lines `WebhookSignatureInvalid` or `WebhookEventAlreadyProcessed` spiking.
+- Log lines `ERR_CONN_RESET upstream=paygate` — PayGate closed the connection mid-delivery; counted under reason `conn_reset`.
 
 ## Background
 
@@ -26,7 +27,8 @@ PayGate delivers events (`payment.succeeded`, `payment.failed`, `refund.complete
 1. Check **PayGate Webhooks** dashboard, panel "Failures by reason". Reasons are the `reason` label on `payments_api_webhook_events_total`.
 2. `signature_invalid` → the secret rotated on the PayGate side without us updating `PAYGATE_WEBHOOK_SECRET`. Compare the secret in the PayGate portal with Vault `secret/navigator/prod/payments-api/paygate` and re-apply the Kubernetes secret `payments-api-paygate`. Restart the deployment.
 3. `timeout` → our handler exceeded PayGate's 10s delivery timeout. Almost always a slow database; follow `rb-payments-p99-latency-spike`. PayGate retries with exponential backoff for 72 hours, so failures here are recoverable.
-4. `unknown_event_type` → PayGate shipped a new event type. Not urgent; file a ticket with label `paygate`.
+4. `conn_reset` (`ERR_CONN_RESET` in logs) → PayGate dropped the connection, usually because our handler held it past their 10s budget during a database stall; treat exactly like `timeout`. If it appears with no latency problem on our side, check the PayGate status page before escalating.
+5. `unknown_event_type` → PayGate shipped a new event type. Not urgent; file a ticket with label `paygate`.
 
 ### Duplicate charges
 

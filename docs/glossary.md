@@ -132,4 +132,4 @@ Terms used across these docs and in the Ops Copilot codebase, alphabetically. Wh
 
 **TriageReport.** The structured output of the triage agent: severity, suspected cause, matching runbook, recent changes, similar incidents, next steps, draft ticket.
 
-**Vector store.** A database indexing embeddings for nearest-neighbour search with metadata filtering. `ChromaStore` wraps ChromaDB at `data/.chroma`.
+**Vector store.** A database indexing embeddings for nearest-neighbour search with metadata filtering. `ChromaStore` wraps ChromaDB at `data/.index/chroma`.

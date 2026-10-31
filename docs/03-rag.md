@@ -11,8 +11,8 @@ data/knowledge_base/**/*.md
    │  loader        → Document(id, title, kind, service, text, metadata)
    │  chunker       → Chunk(id, doc_id, heading, text, metadata)
    │  embeddings    → vectors
-   ├─ store         → ChromaStore (data/.chroma)
-   └─ BM25 index    → data/.bm25.pkl
+   ├─ store         → ChromaStore (data/.index/chroma)
+   └─ BM25 index    → data/.index/bm25.pkl
                       │
    query ──▶ HybridRetriever: BM25 ranks + vector ranks → RRF → filter → RetrievedChunk(score, chunk)
 ```
@@ -112,7 +112,7 @@ See [`adr/0005-pluggable-embeddings.md`](adr/0005-pluggable-embeddings.md) for t
 
 ## Step 4: The vector store (`ops_copilot.rag.store`)
 
-`ChromaStore` wraps a persistent ChromaDB collection at `data/.chroma`. It stores for each chunk the vector, the text, and the metadata dict, and answers `query(vector, k, where=...)` with the nearest chunks. The `where` clause is how metadata filters reach the vector side.
+`ChromaStore` wraps a persistent ChromaDB collection at `data/.index/chroma`. It stores for each chunk the vector, the text, and the metadata dict, and answers `query(vector, k, where=...)` with the nearest chunks. The `where` clause is how metadata filters reach the vector side.
 
 Chroma is used because it is embedded (no server to run), persistent, and supports metadata filtering. For a portfolio project that is the right trade. Chapter 07 discusses what you would move to at scale.
 
@@ -122,7 +122,7 @@ Vectors are bad at one thing runbooks are full of: **exact identifiers**. `ERR_C
 
 **BM25** is the classic lexical ranking function behind most search engines. It scores a document for a query by term frequency (how often the query words appear) adjusted by inverse document frequency (rare words count more) and document length. It does not understand meaning at all, which is exactly why it is perfect for identifiers.
 
-The project uses `rank-bm25` over the same chunk list, tokenised simply, and pickles the index to `data/.bm25.pkl` at ingest time.
+The project uses `rank-bm25` over the same chunk list, tokenised simply, and pickles the index to `data/.index/bm25.pkl` at ingest time.
 
 ## Step 6: Why hybrid, and Reciprocal Rank Fusion (`ops_copilot.rag.retriever`)
 
@@ -174,7 +174,7 @@ See [`adr/0001-hybrid-retrieval.md`](adr/0001-hybrid-retrieval.md).
 
 ## Step 7: Metadata filtering
 
-`search_knowledge(query, kind?, service?, k)` on the MCP server passes `kind` and `service` through to `HybridRetriever.retrieve(filter=...)`. On the vector side this is Chroma's `where`; on the BM25 side it is a post-filter over chunk metadata.
+`search_knowledge(query, kind?, service?, k)` on the MCP server passes `kind` and `service` through to `HybridRetriever.search(filter=...)`. On the vector side this is Chroma's `where`; on the BM25 side it is a post-filter over chunk metadata.
 
 Filters are powerful and dangerous. "runbooks for payments-api" with `kind=runbook, service=payments-api` gives precise results. But a filter the model guesses wrongly (`service="payments"` when the catalogue says `payments-api`) returns nothing. The knowledge agent's prompt tells it to retry without the filter when a filtered search returns no results.
 

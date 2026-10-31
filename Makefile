@@ -1,4 +1,4 @@
-.PHONY: install ingest test test-all lint ask triage release eval serve
+.PHONY: install ingest test test-all lint eval serve
 
 install:
 	pip install -e ".[dev]"

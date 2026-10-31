@@ -58,13 +58,13 @@ ops-copilot serve               # FastAPI on http://localhost:8000/docs
 
 No API key? `ingest`, `eval` (without `--judge`) and the full test-suite work offline. Set `OPS_COPILOT_EMBEDDING_PROVIDER=hashing` if you can't download the embedding model.
 
-A sample of what `ops-copilot eval --compare` prints on the committed golden set (15 questions + 2 negatives) **with the hashing provider that CI uses**:
+A sample of what `ops-copilot eval --compare` prints on the committed golden set (16 questions + 2 negatives) **with the hashing provider that CI uses**:
 
 | metric | hybrid | bm25 only | vector only |
 |---|---|---|---|
-| hit@1 | 0.467 | 0.733 | 0.333 |
-| hit@5 | 1.000 | 1.000 | 0.600 |
-| mrr   | 0.700 | 0.844 | 0.413 |
+| hit@1 | 0.562 | 0.812 | 0.250 |
+| hit@5 | 1.000 | 1.000 | 0.625 |
+| mrr   | 0.760 | 0.896 | 0.347 |
 
 Read that honestly: with *hashing* "embeddings" (a lexical stand-in, no semantics) fusing in the vector list drags the hybrid ranking down — BM25 alone wins. That is the point of the comparison mode: re-run it with the default local ONNX embeddings (or Voyage) and the vector and hybrid columns are what tell you whether semantic retrieval is earning its keep on *your* corpus. `docs/03-rag.md` and `docs/06-evaluation.md` walk through this experiment.
 

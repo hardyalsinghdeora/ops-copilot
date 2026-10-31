@@ -56,7 +56,7 @@ from ops_copilot.config import Settings
 from ops_copilot.rag.retriever import HybridRetriever
 
 mcp = FastMCP("ops-copilot-knowledge")
-_retriever: HybridRetriever | None = None   # loaded lazily from data/.chroma + data/.bm25.pkl
+_retriever: HybridRetriever | None = None   # loaded lazily from data/.index/chroma + data/.index/bm25.pkl
 
 @mcp.tool()
 def search_knowledge(query: str, kind: str | None = None, service: str | None = None, k: int = 5) -> list[dict]:
@@ -68,7 +68,7 @@ def search_knowledge(query: str, kind: str | None = None, service: str | None = 
     If a filtered search returns nothing, retry without filters.
     """
     filt = {k_: v for k_, v in {"kind": kind, "service": service}.items() if v}
-    hits = _get_retriever().retrieve(query, k=k, filter=filt or None)
+    hits = _get_retriever().search(query, k=k, filter=filt or None)
     return [{"chunk_id": h.chunk.id, "doc_id": h.chunk.doc_id, "title": h.chunk.metadata["title"],
              "heading": h.chunk.heading, "text": h.chunk.text, "score": h.score} for h in hits]
 
@@ -160,7 +160,7 @@ async def load_mcp_tools():
 Two practical notes:
 
 - MCP clients are async. The CLI runs the graph inside `asyncio.run(...)`.
-- Each server is a subprocess spawned on startup. If `knowledge_server` cannot find `data/.chroma`, the error surfaces as a tool error at first call, not at connect time. Run `ops-copilot ingest` first.
+- Each server is a subprocess spawned on startup. If `knowledge_server` cannot find `data/.index/chroma`, the error surfaces as a tool error at first call, not at connect time. Run `ops-copilot ingest` first.
 
 ## Plugging the knowledge server into Claude Desktop and Claude Code
 

@@ -36,7 +36,7 @@ Ops Copilot is a **multi-agent, retrieval-grounded assistant for on-call enginee
 | RAG | `ops_copilot.rag.loader` | Load markdown with YAML front-matter → `Document(id, title, kind, service, text, metadata)`. |
 | | `ops_copilot.rag.chunker` | Heading-aware chunking with token-ish size + overlap → `Chunk(id, doc_id, heading, text, metadata)`. |
 | | `ops_copilot.rag.embeddings` | `EmbeddingProvider` protocol; `LocalMiniLM` (ONNX, default), `VoyageEmbeddings`, `HashingEmbeddings` (deterministic, offline — tests/CI). |
-| | `ops_copilot.rag.store` | `ChromaStore` persistent vector store (`data/.chroma`). |
+| | `ops_copilot.rag.store` | `ChromaStore` persistent vector store (`data/.index/chroma`). |
 | | `ops_copilot.rag.retriever` | `HybridRetriever`: BM25 (lexical) + vector (semantic) fused with Reciprocal Rank Fusion; optional metadata filter; returns `RetrievedChunk(score, chunk)`. |
 | | `ops_copilot.rag.ingest` | `ingest(kb_dir)` pipeline → store + BM25 index saved to disk. |
 | MCP | `ops_copilot.mcp_servers.knowledge_server` | FastMCP server (stdio) exposing the retriever: `search_knowledge(query, kind?, service?, k)`, `get_document(doc_id)`, `list_documents(kind?)`. |
@@ -67,8 +67,9 @@ Ops Copilot is a **multi-agent, retrieval-grounded assistant for on-call enginee
 1. `cli triage "PagerDuty: payments-api p99 latency > 2s since 02:10"`
 2. supervisor → `triage`.
 3. triage agent: `get_active_alerts` → `get_service(payments-api)` (owner, on-call, dependencies) → `list_recent_deployments(service, hours=24)` → `search_tickets(similar)` → `search_knowledge(runbook for latency)`.
-4. Produces `TriageReport`; calls `draft_ticket` → graph **interrupts** at `human_approval`.
-5. Human approves in CLI → ticket filed (to `data/.drafts/`), reviewer validates report, END.
+4. Produces a typed `TriageReport` (rendered to markdown); if it called `draft_ticket`, `collect_pending` records the draft as `pending_action`.
+5. **reviewer** validates the report against the evidence (revise loop as above).
+6. Graph **interrupts** at `human_approval`; the human approves or rejects in the CLI / `POST /approve` → draft marked in `data/.drafts/` → END.
 
 ## Key design decisions (see `docs/adr/`)
 
@@ -83,7 +84,7 @@ Ops Copilot is a **multi-agent, retrieval-grounded assistant for on-call enginee
 
 - `data/knowledge_base/` — synthetic but realistic markdown: runbooks, ADRs, postmortems, service pages for a fictional e-learning platform ("Navigator"). Front-matter: `id`, `title`, `kind`, `service`, `owner`, `updated`.
 - `data/fixtures/` — `services.json`, `alerts.json`, `deployments.json`, `tickets.json`.
-- `data/.chroma/`, `data/.bm25.pkl`, `data/.drafts/` — generated at runtime, git-ignored.
+- `data/.index/chroma/`, `data/.index/bm25.pkl`, `data/.drafts/` — generated at runtime, git-ignored.
 
 ## Running
 

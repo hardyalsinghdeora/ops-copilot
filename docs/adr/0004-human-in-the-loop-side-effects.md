@@ -18,9 +18,10 @@ LangGraph's `interrupt()` pauses a graph inside a node, surfaces a payload, pers
 
 Anything that writes to the outside world goes through `interrupt()`.
 
-- The MCP tool `draft_ticket` in `ops_copilot.mcp_servers.ops_server` **does not file anything**. It validates and returns a draft with a `draft_id`. The triage agent stores it in `CopilotState.pending_action`.
-- `ops_copilot.agents.human_approval` is a graph node that calls `interrupt({"type": "approve_ticket", "draft": ...})`. The CLI prints the draft and asks for approval; the API returns `awaiting_approval` with the `thread_id`.
-- On `Command(resume={"approved": True})` the node performs the write (to `data/.drafts/` in v1; to a real tracker later). On rejection it records that and continues. In both cases the reviewer then validates the triage report and the graph ends.
+- The MCP tool `draft_ticket` in `ops_copilot.mcp_servers.ops_server` **does not file anything**. It saves a draft to `data/.drafts/` and returns it with a `draft_id`. The `collect_pending` node finds that tool result in `evidence` and stores it in `CopilotState.pending_action`.
+- The reviewer validates the triage report first; a draft that fails review is revised before anyone is asked to approve a ticket based on it.
+- `ops_copilot.agents.human_approval` is a graph node that calls `interrupt({"question": ..., "action": {"type": "file_ticket", "draft_id": ..., ...}, "hint": ...})`. The CLI prints the action and asks for approval; the API returns the payload as `pending_approval` with the `thread_id`.
+- On `Command(resume={"approved": True, "comment": ...})` the node marks the draft `approved` (in v1 that is where a real tracker call would go). On rejection it marks it `rejected`. Either way the decision is appended to the final answer and the graph ends.
 - Any future write tool (`create_ticket`, `acknowledge_alert`, `post_status_update`) must follow the same pattern: tool returns an intent, a node behind `interrupt()` executes it.
 
 ## Consequences

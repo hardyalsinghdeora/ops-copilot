@@ -47,7 +47,11 @@ def _run(task: str, route: str | None, tool_mode: str, show_evidence: bool, auto
     from .agents import final_answer, initial_state, thread_config
     from .runtime import get_graph
 
-    graph = get_graph(tool_mode)  # type: ignore[arg-type]
+    try:
+        graph = get_graph(tool_mode)  # type: ignore[arg-type]
+    except RuntimeError as e:  # e.g. missing ANTHROPIC_API_KEY — one clear line, not a traceback
+        console.print(f"[red]error:[/red] {e}")
+        raise typer.Exit(code=1) from None
     cfg = thread_config(str(uuid.uuid4()))
     with console.status("[bold]agents working…"):
         state = graph.invoke(initial_state(task, route), cfg)  # type: ignore[arg-type]

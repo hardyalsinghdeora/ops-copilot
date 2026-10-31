@@ -138,6 +138,15 @@
     "category": "service"
   },
   {
+    "id": "q16",
+    "question": "What does ERR_CONN_RESET from PayGate mean during webhook delivery?",
+    "expected_doc_ids": [
+      "rb-paygate-webhook-failures-duplicate-charges"
+    ],
+    "reference_answer": "PayGate dropped the connection, usually because the handler held it past their 10s delivery budget during a database stall; treat it exactly like a timeout and check the PayGate status page if there is no latency problem on our side.",
+    "category": "runbook"
+  },
+  {
     "id": "neg01",
     "question": "How do I configure the mobile app's offline mode for students?",
     "expected_doc_ids": [],

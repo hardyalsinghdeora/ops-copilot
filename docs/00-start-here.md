@@ -86,7 +86,7 @@ cp .env.example .env            # add ANTHROPIC_API_KEY
 pip install -e ".[dev]"
 
 # 3. Build the index. Reads data/knowledge_base/**/*.md, chunks, embeds with the
-#    default LocalMiniLM ONNX provider, writes data/.chroma and data/.bm25.pkl.
+#    default LocalMiniLM ONNX provider, writes data/.index/chroma and data/.index/bm25.pkl.
 ops-copilot ingest
 
 # 4. Ask a knowledge question. Watch for the [doc_id#chunk] citations.
@@ -110,7 +110,7 @@ ops-copilot mcp knowledge
 
 Things to notice while it runs:
 
-- After step 3, look at `data/.chroma/` and `data/.bm25.pkl`. Two indexes, one corpus. Chapter 03 explains why.
+- After step 3, look at `data/.index/chroma/` and `data/.index/bm25.pkl`. Two indexes, one corpus. Chapter 03 explains why.
 - In step 4, try a query with an exact identifier (`ERR_CONN_RESET`) and one with a concept ("what causes latency spikes"). Note which chunks come back. That difference is the whole argument for hybrid retrieval.
 - In step 5, reject the ticket once. Nothing should be written to `data/.drafts/`. That is the human-in-the-loop guarantee.
 - If you have no API key yet, steps 3 and the retrieval half of step 7 still work. Set `OPS_COPILOT_EMBEDDING_PROVIDER=hashing` in `.env` to skip downloading the ONNX model too; results will be worse, which is itself instructive.

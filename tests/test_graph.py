@@ -158,3 +158,30 @@ def test_release_agent_cannot_draft_tickets(local_tools):
     build_release_agent(Spy(responses=[]), local_tools)
     assert "draft_ticket" not in captured["tools"]
     assert {"search_tickets", "list_recent_deployments"} <= captured["tools"]
+
+
+def test_each_specialist_sees_only_its_tools(local_tools):
+    """Least privilege: the spec's 3 / 8 / 5 split (ADR 0003)."""
+    from ops_copilot.agents.knowledge_agent import build_knowledge_agent
+    from ops_copilot.agents.release_agent import build_release_agent
+    from ops_copilot.agents.triage_agent import build_triage_agent
+    from ops_copilot.mcp_client import split_tools
+
+    seen: dict[str, set[str]] = {}
+
+    def spy(name):
+        class Spy(ScriptedChatModel):
+            def bind_tools(self, tools, **kwargs):
+                seen[name] = {t.name for t in tools}
+                return self
+
+        return Spy(responses=[])
+
+    knowledge_tools, _ = split_tools(local_tools)
+    build_knowledge_agent(spy("knowledge"), knowledge_tools)
+    build_triage_agent(spy("triage"), local_tools)
+    build_release_agent(spy("release"), local_tools)
+
+    assert seen["knowledge"] == {"search_knowledge", "get_document", "list_documents"}
+    assert len(seen["triage"]) == 8 and "draft_ticket" in seen["triage"] and "list_documents" not in seen["triage"]
+    assert len(seen["release"]) == 5 and "draft_ticket" not in seen["release"]

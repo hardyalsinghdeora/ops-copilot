@@ -85,5 +85,5 @@ The diagram in [`architecture.md`](architecture.md) has four regions. Here is wh
 
 - Code snippets are small and illustrative. They use the real names from the spec but are not the full implementation; read the source for that.
 - Commands are shown as the installed console script, `ops-copilot …`. If you have not run `pip install -e ".[dev]"`, substitute `python -m ops_copilot.cli …`.
-- Model roles are referred to as **strong** (Sonnet, model ID `claude-sonnet-5-5`) and **fast** (Haiku, model ID `claude-haiku-5-5`). The IDs live in `Settings`; the docs only ever mention them in Chapter 01.
+- Model roles are referred to as **strong** (Sonnet, model ID `claude-sonnet-5-5`) and **fast** (Haiku, model ID `claude-haiku-5-5`). The IDs live in `Settings`; Chapter 01 explains the tiering.
 - "Evidence" means the list of retrieved chunks and tool results stored in `CopilotState.evidence`. "Grounded" means an answer whose claims are supported by evidence.
