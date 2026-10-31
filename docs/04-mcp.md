@@ -160,6 +160,7 @@ async def load_mcp_tools():
 Two practical notes:
 
 - MCP clients are async. The CLI runs the graph inside `asyncio.run(...)`.
+- `MultiServerMCPClient.get_tools()` without a session starts a new server process for every tool call, which here means reloading the index and embedding model each time (about 2.5 s a call). The CLI and API use `mcp_sessions()` instead, which keeps one process per server open for the app's lifetime (a search then takes about 40 ms).
 - Each server is a subprocess spawned on startup. If `knowledge_server` cannot find `data/.index/chroma`, the error surfaces as a tool error at first call, not at connect time. Run `ops-copilot ingest` first.
 
 ## Plugging the knowledge server into Claude Desktop and Claude Code

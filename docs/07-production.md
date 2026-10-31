@@ -23,7 +23,7 @@ Keep the fixture server. It is what tests and evals run against, and it is what 
 
 ## Authentication and secrets
 
-**Now.** One `ANTHROPIC_API_KEY` and optionally `VOYAGE_API_KEY` in `.env`, read by `Settings`. The MCP servers run as the local user over stdio.
+**Now.** One `ANTHROPIC_API_KEY` and optionally `VOYAGE_API_KEY` in `.env`, read by `Settings`. The MCP servers run as the local user over stdio. The API can require one shared bearer token (`OPS_COPILOT_API_TOKEN`); there is no per-user identity.
 
 **Production.**
 
@@ -104,14 +104,14 @@ Adding SSE to the FastAPI service is one of the stretch projects in [`exercises.
 
 ## Deployment
 
-**Now.** `ops-copilot serve` runs uvicorn on `:8000` with `POST /chat`, `POST /triage`, `POST /approve`, `POST /release-notes`, `GET /health`. The checkpointer is in memory.
+**Now.** `ops-copilot serve` runs uvicorn on `:8000` (or `$PORT`) with a chat page at `/` and `POST /chat`, `POST /triage`, `POST /approve`, `POST /release-notes`, `GET /health`. `render.yaml` deploys the Docker image to Render as one always-on instance (see the README). The checkpointer is in memory.
 
 **Production.**
 
 - **Container.** The repo's `Dockerfile` installs the package (pinned by `requirements.lock`), runs `ops-copilot ingest` at build time so the index and ONNX embedding model are baked in (startup does not download), runs as a non-root user with a `HEALTHCHECK`, and starts `ops-copilot serve`; CI builds it and probes `/health`. In production the ingest step can also be an init container. The MCP servers run as subprocesses inside the same container over stdio; that is fine until you want to share them, at which point they become their own deployments over streamable HTTP.
 - **Persistent checkpointer.** `interrupt()` with `MemorySaver` cannot survive a restart or a second replica. Use the Postgres or SQLite checkpointer from LangGraph so an approval started on one replica can resume on another.
 - **Index as an artefact.** Build `data/.index/chroma` and `data/.index/bm25.pkl` in CI, version them with the knowledge-base commit, mount them read-only. Rebuild on knowledge-base change, not on API deploy.
-- **Health.** `GET /health` should check the index is loaded and the MCP servers respond to `tools/list`, not just that the process is up.
+- **Health.** `GET /health` pings each MCP server and answers 503 when one stops responding, so the host restarts the service; it also reports whether the index exists.
 - **Human approval over HTTP.** The API already works this way: when triage drafts a ticket, `POST /triage` returns the `thread_id` and `pending_approval` (the drafted ticket); `POST /approve` with that thread id and the decision resumes the graph with `Command(resume=...)`, and new messages on the thread get a 409 until then. In Slack this is two buttons.
 
 ## Honest limitations
@@ -122,7 +122,7 @@ Adding SSE to the FastAPI service is one of the stretch projects in [`exercises.
 - **Small-corpus assumptions.** BM25 via `rank-bm25` holds the whole index in memory and pickles it; fine for hundreds of documents, not for a 100,000-page wiki. Chroma embedded mode has similar limits. At scale you move to a search engine with native hybrid support (OpenSearch, Elasticsearch, Vespa, or a managed vector database) and keep the `HybridRetriever` interface.
 - **The reviewer is a model.** It catches most unsupported claims; it does not catch all, and it adds a model call to every request. The two-round cap means a persistently bad answer is shown with a warning, not blocked.
 - **Evals are small and synthetic.** The golden set is written by the author against a synthetic knowledge base. Real questions are messier.
-- **No streaming, no async job model, no auth** on the API.
+- **No streaming, no async job model**, and only one shared access token on the API (no per-user identity or quotas).
 - **Fixture data is not real data.** The triage flow has never been run against a real PagerDuty incident with real noise.
 
 None of these are surprises; they are the gap between a project that demonstrates an architecture and a service a platform team runs. The point of listing them is that you can name every one in an interview and say what you would do about it.

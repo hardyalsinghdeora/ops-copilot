@@ -19,6 +19,7 @@ USER app
 RUN ops-copilot ingest
 
 EXPOSE 8000
+# same port the server picks (OPS_COPILOT_API_PORT, else PORT as set by hosts like Render, else 8000)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+  CMD ["python", "-c", "import urllib.request; from ops_copilot.config import get_settings; urllib.request.urlopen(f'http://127.0.0.1:{get_settings().api_port}/health', timeout=4)"]
 CMD ["ops-copilot", "serve"]

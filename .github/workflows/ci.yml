@@ -41,14 +41,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t ops-copilot:ci .
-      - name: Smoke test GET /health
-        # a placeholder key is enough: startup builds the graph and lists the MCP tools,
+      - name: Smoke test, run as Render runs it (PORT set, token required)
+        # a placeholder key is enough: startup builds the graph and starts the MCP servers,
         # neither of which calls the Anthropic API
         run: |
-          docker run -d --name copilot -p 8000:8000 -e ANTHROPIC_API_KEY=ci-placeholder ops-copilot:ci
+          docker run -d --name copilot -p 8000:10000 -e PORT=10000 \
+            -e ANTHROPIC_API_KEY=ci-placeholder -e OPS_COPILOT_API_TOKEN=ci-token ops-copilot:ci
           for _ in $(seq 1 30); do
-            if curl -fsS http://localhost:8000/health; then exit 0; fi
+            if curl -fsS http://localhost:8000/health > health.json; then break; fi
             sleep 2
           done
-          docker logs copilot
-          exit 1
+          cat health.json; echo
+          grep -q '"tools_ok":true' health.json || { docker logs copilot; exit 1; }
+          curl -fsS http://localhost:8000/ | grep -q "<title>Ops Copilot</title>"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8000/chat \
+            -H 'Content-Type: application/json' -d '{"message": "hi"}')
+          test "$code" = 401

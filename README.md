@@ -53,7 +53,7 @@ ops-copilot ask "How do I rotate the payments DB credentials?"
 ops-copilot triage "PagerDuty: payments-api p99 latency > 2s since 02:10"
 ops-copilot release-notes --version 2.14.0
 ops-copilot eval --compare      # retrieval metrics offline (hybrid vs bm25 vs vector); add --judge for faithfulness
-ops-copilot serve               # FastAPI on http://localhost:8000/docs
+ops-copilot serve               # chat page on http://localhost:8000, API docs at /docs
 ```
 
 No API key? `ingest`, `eval` (without `--judge`) and the full test-suite work offline. Set `OPS_COPILOT_EMBEDDING_PROVIDER=hashing` if you can't download the embedding model.
@@ -67,6 +67,22 @@ A sample of what `ops-copilot eval --compare` prints on the committed golden set
 | mrr   | 0.760 | 0.896 | 0.347 |
 
 Read that honestly: with *hashing* "embeddings" (a lexical stand-in, no semantics) fusing in the vector list drags the hybrid ranking down — BM25 alone wins. That is the point of the comparison mode: re-run it with the default local ONNX embeddings (or Voyage) and the vector and hybrid columns are what tell you whether semantic retrieval is earning its keep on *your* corpus. `docs/03-rag.md` and `docs/06-evaluation.md` walk through this experiment.
+
+## Run it online
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/hardyalsinghdeora/ops-copilot)
+
+1. Click the button and sign in to Render. It reads [`render.yaml`](render.yaml) and proposes one web service built from the `Dockerfile`.
+2. Paste your Anthropic API key when asked and create the service. The first build takes a few minutes: it bakes the search index and embedding model into the image.
+3. When it is live, open the service's **Environment** page and copy `OPS_COPILOT_API_TOKEN` (Render generated it).
+4. Open the service URL, paste the token into the box at the top of the page, and ask away.
+
+Good to know:
+
+- Every question spends your Anthropic credit, and anyone with the URL **and** the token can ask. Share both only with people you trust, and set a monthly spend limit in the Anthropic Console.
+- The blueprint uses Render's 2 GB `standard` plan (paid). The 512 MB plans run out of memory.
+- Keep it to one instance. Drafted tickets waiting for approval are held in memory, so they are lost when the service restarts or redeploys (every push to `main` redeploys).
+- The same image runs on any container host: set `ANTHROPIC_API_KEY` and `OPS_COPILOT_API_TOKEN`; the port comes from `PORT` when the platform sets it.
 
 ### Use the knowledge base from Claude Desktop / Claude Code
 
@@ -83,7 +99,7 @@ src/ops_copilot/
   mcp_client.py   MultiServerMCPClient → LangChain tools (or in-process "local" mode)
   agents/         state, supervisor, specialist (ReAct), knowledge/triage/release agents, reviewer, human_approval, graph
   evals/          golden.json, retrieval_eval (hit@k, MRR), judge (faithfulness), run
-  api/main.py     FastAPI (/chat /triage /approve /release-notes /health)
+  api/            FastAPI (/chat /triage /approve /release-notes /health) + chat page at /
   cli.py          Typer CLI
 data/
   knowledge_base/ runbooks, adrs, postmortems, services (markdown + front-matter)

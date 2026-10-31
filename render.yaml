@@ -1,0 +1,16 @@
+# Render Blueprint: one web service built from this repo's Dockerfile.
+# Deploy it with the "Deploy to Render" button in the README.
+services:
+  - type: web
+    name: ops-copilot
+    runtime: docker
+    # 2 GB. The 512 MB plans are too small: with both MCP servers and the embedding model
+    # loaded the app uses about 500 MB, more while several tool calls run at once.
+    plan: standard
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # Render asks for it during setup; it is never stored in the repo
+      - key: OPS_COPILOT_API_TOKEN
+        generateValue: true  # a random access token: copy it from the service's Environment page

@@ -41,7 +41,7 @@ Ops Copilot is a **multi-agent, retrieval-grounded assistant for on-call enginee
 | | `ops_copilot.rag.ingest` | `ingest(kb_dir)` pipeline → store + BM25 index saved to disk. |
 | MCP | `ops_copilot.mcp_servers.knowledge_server` | FastMCP server (stdio) exposing the retriever: `search_knowledge(query, kind?, service?, k)`, `get_document(doc_id)`, `list_documents(kind?)`. |
 | | `ops_copilot.mcp_servers.ops_server` | FastMCP server (stdio) over JSON fixtures: `get_service`, `get_active_alerts`, `list_recent_deployments`, `search_tickets`, `get_ticket`, `draft_ticket`. Mirrors what Jira / PagerDuty / ArgoCD adapters would expose. |
-| | `ops_copilot.mcp_client` | `load_mcp_tools()` → LangChain tools via `langchain-mcp-adapters` `MultiServerMCPClient`. |
+| | `ops_copilot.mcp_client` | `mcp_sessions()` + `tools_from_sessions()`: one long-lived process per server (what the CLI and API use); `load_mcp_tools()`: stateless, a fresh server per call (for scripts). Both via `langchain-mcp-adapters` `MultiServerMCPClient`. |
 | Agents | `ops_copilot.agents.state` | `CopilotState` (TypedDict): `messages`, `route`, `evidence`, `draft`, `review`, `attempts`, `final`, `pending_action`. |
 | | `ops_copilot.agents.supervisor` | Structured-output router → `knowledge` / `triage` / `release_notes`. |
 | | `ops_copilot.agents.knowledge_agent` | ReAct loop over knowledge tools; answers with `[doc_id#chunk]` citations. |
@@ -51,7 +51,7 @@ Ops Copilot is a **multi-agent, retrieval-grounded assistant for on-call enginee
 | | `ops_copilot.agents.human_approval` | `interrupt()` node — a drafted ticket is only filed after a human approves (human-in-the-loop). |
 | | `ops_copilot.agents.graph` | `build_graph(llm_strong, llm_fast, tools, checkpointer)` wires it all. |
 | Interfaces | `ops_copilot.cli` | `ingest`, `ask`, `triage`, `release-notes`, `eval`, `serve`, `mcp` (run a server). |
-| | `ops_copilot.api.main` | FastAPI: `POST /chat`, `POST /triage`, `POST /approve`, `POST /release-notes`, `GET /health`. |
+| | `ops_copilot.api.main` | FastAPI: `POST /chat`, `POST /triage`, `POST /approve`, `POST /release-notes` (bearer token when `OPS_COPILOT_API_TOKEN` is set), `GET /health` (503 if an MCP server stops answering), and a chat page at `GET /`. |
 | Evals | `ops_copilot.evals` | `golden.json` Q/A set; `retrieval_eval` (hit@k, MRR); `judge` (faithfulness / answer-relevance via Haiku). |
 
 ## Request lifecycle (knowledge question)
