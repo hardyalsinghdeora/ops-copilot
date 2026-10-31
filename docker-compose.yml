@@ -6,4 +6,9 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPS_COPILOT_EMBEDDING_PROVIDER=local
     volumes:
-      - ./data/.drafts:/app/data/.drafts
+      # a named volume keeps the image's ownership (the app runs as uid 1000); list the
+      # drafts with: docker compose exec ops-copilot ls data/.drafts
+      - drafts:/app/data/.drafts
+
+volumes:
+  drafts:

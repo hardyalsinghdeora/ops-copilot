@@ -35,3 +35,20 @@ jobs:
         with:
           name: eval-report-${{ matrix.python-version }}
           path: eval-report.json
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ops-copilot:ci .
+      - name: Smoke test GET /health
+        # a placeholder key is enough: startup builds the graph and lists the MCP tools,
+        # neither of which calls the Anthropic API
+        run: |
+          docker run -d --name copilot -p 8000:8000 -e ANTHROPIC_API_KEY=ci-placeholder ops-copilot:ci
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health; then exit 0; fi
+            sleep 2
+          done
+          docker logs copilot
+          exit 1
