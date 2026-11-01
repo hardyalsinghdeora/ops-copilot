@@ -104,7 +104,7 @@ Adding SSE to the FastAPI service is one of the stretch projects in [`exercises.
 
 ## Deployment
 
-**Now.** `ops-copilot serve` runs uvicorn on `:8000` (or `$PORT`) with a chat page at `/` and `POST /chat`, `POST /triage`, `POST /approve`, `POST /release-notes`, `GET /health`. `render.yaml` deploys the Docker image to Render as one always-on instance (see the README). The checkpointer is in memory.
+**Now.** `ops-copilot serve` runs uvicorn on `:8000` (or `$PORT`) with a chat page at `/` and `POST /chat`, `POST /triage`, `POST /approve`, `POST /release-notes`, `GET /health`. CI publishes the image to `ghcr.io` on every push to `main`; `render.yaml` deploys it to Render as one always-on instance, and `deploy/huggingface/` runs it as a free Hugging Face Space (see the README). The checkpointer is in memory.
 
 **Production.**
 

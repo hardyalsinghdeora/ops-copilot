@@ -70,6 +70,20 @@ Read that honestly: with *hashing* "embeddings" (a lexical stand-in, no semantic
 
 ## Run it online
 
+CI publishes the app as a Docker image, `ghcr.io/hardyalsinghdeora/ops-copilot`, on every push to `main`. Hosting can be free; the answers are not: every question is billed to your Anthropic key.
+
+### Free: Hugging Face Spaces
+
+1. Once, after CI's first publish: on GitHub open your profile → **Packages** → `ops-copilot` → **Package settings** → **Change visibility** → **Public**, so Hugging Face can pull the image.
+2. On Hugging Face, create a **New Space**: SDK **Docker**, template **Blank**, hardware **CPU basic** (free).
+3. Put the two files from [`deploy/huggingface/`](deploy/huggingface) into the Space, replacing its `README.md` (**Files → Add file**, or push them with git).
+4. In the Space's **Settings → Variables and secrets**, add two secrets: `ANTHROPIC_API_KEY`, and `OPS_COPILOT_API_TOKEN` set to any long random string (the password you will paste into the page). For cheaper answers, also add the variable `OPS_COPILOT_MODEL_STRONG` = `claude-haiku-5-5`.
+5. When the Space shows **Running**, open it, paste the token into the box at the top, and ask away.
+
+Free Spaces sleep after a while without visitors and wake on the next visit. To pick up a newer version after pushing to `main`, use **Settings → Factory rebuild**.
+
+### Always on: Render
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/hardyalsinghdeora/ops-copilot)
 
 1. Click the button and sign in to Render. It reads [`render.yaml`](render.yaml) and proposes one web service built from the `Dockerfile`.
@@ -77,12 +91,20 @@ Read that honestly: with *hashing* "embeddings" (a lexical stand-in, no semantic
 3. When it is live, open the service's **Environment** page and copy `OPS_COPILOT_API_TOKEN` (Render generated it).
 4. Open the service URL, paste the token into the box at the top of the page, and ask away.
 
-Good to know:
+The blueprint uses Render's 2 GB `standard` plan (paid); the 512 MB plans run out of memory. Every push to `main` redeploys.
 
-- Every question spends your Anthropic credit, and anyone with the URL **and** the token can ask. Share both only with people you trust, and set a monthly spend limit in the Anthropic Console.
-- The blueprint uses Render's 2 GB `standard` plan (paid). The 512 MB plans run out of memory.
-- Keep it to one instance. Drafted tickets waiting for approval are held in memory, so they are lost when the service restarts or redeploys (every push to `main` redeploys).
-- The same image runs on any container host: set `ANTHROPIC_API_KEY` and `OPS_COPILOT_API_TOKEN`; the port comes from `PORT` when the platform sets it.
+### Any container host
+
+```bash
+docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... -e OPS_COPILOT_API_TOKEN=pick-a-long-secret ghcr.io/hardyalsinghdeora/ops-copilot
+```
+
+The port comes from `PORT` when the platform sets it.
+
+Good to know, wherever it runs:
+
+- Anyone with the URL **and** the token can ask, on your Anthropic credit. Share both only with people you trust, and set a monthly spend limit in the Anthropic Console.
+- Run a single instance. Drafted tickets waiting for approval are held in memory, so they are lost when the app restarts, sleeps or redeploys.
 
 ### Use the knowledge base from Claude Desktop / Claude Code
 

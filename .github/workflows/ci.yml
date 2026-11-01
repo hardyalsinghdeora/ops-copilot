@@ -37,10 +37,14 @@ jobs:
           path: eval-report.json
 
   docker:
+    needs: test  # the image is published below, so only build it from code that passed
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t ops-copilot:ci .
+      - run: docker build --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" -t ops-copilot:ci .
       - name: Smoke test, run as Render runs it (PORT set, token required)
         # a placeholder key is enough: startup builds the graph and starts the MCP servers,
         # neither of which calls the Anthropic API
@@ -57,3 +61,13 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8000/chat \
             -H 'Content-Type: application/json' -d '{"message": "hi"}')
           test "$code" = 401
+      - name: Publish to GitHub Container Registry (main only)
+        # what deploy/huggingface/Dockerfile and `docker run` users pull
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for tag in latest "${GITHUB_SHA::7}"; do
+            docker tag ops-copilot:ci "$image:$tag"
+            docker push "$image:$tag"
+          done
