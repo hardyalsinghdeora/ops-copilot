@@ -74,13 +74,12 @@ CI publishes the app as a Docker image, `ghcr.io/hardyalsinghdeora/ops-copilot`,
 
 ### Free: Hugging Face Spaces
 
-1. Once, after CI's first publish: on GitHub open your profile → **Packages** → `ops-copilot` → **Package settings** → **Change visibility** → **Public**, so Hugging Face can pull the image.
-2. On Hugging Face, create a **New Space**: SDK **Docker**, template **Blank**, hardware **CPU basic** (free).
-3. Put the two files from [`deploy/huggingface/`](deploy/huggingface) into the Space, replacing its `README.md` (**Files → Add file**, or push them with git).
-4. In the Space's **Settings → Variables and secrets**, add two secrets: `ANTHROPIC_API_KEY`, and `OPS_COPILOT_API_TOKEN` set to any long random string (the password you will paste into the page). For cheaper answers, also add the variable `OPS_COPILOT_MODEL_STRONG` = `claude-haiku-5-5`.
-5. When the Space shows **Running**, open it, paste the token into the box at the top, and ask away.
+1. On Hugging Face, create a **New Space**: SDK **Docker**, template **Blank**, hardware **CPU basic** (free).
+2. Put the two files from [`deploy/huggingface/`](deploy/huggingface) into the Space, replacing its `README.md` (**Files → Add file**, or push them with git).
+3. In the Space's **Settings → Variables and secrets**, add two secrets: `ANTHROPIC_API_KEY`, and `OPS_COPILOT_API_TOKEN` set to any long random string (the password you will paste into the page). For cheaper answers, also add the variable `OPS_COPILOT_MODEL_STRONG` = `claude-haiku-5-5`.
+4. When the Space shows **Running**, open it, paste the token into the box at the top, and ask away.
 
-Free Spaces sleep after a while without visitors and wake on the next visit. To pick up a newer version after pushing to `main`, use **Settings → Factory rebuild**.
+Free Spaces sleep after a while without visitors and wake on the next visit. To pick up a newer version after pushing to `main`, use **Settings → Factory rebuild**. If the Space build ever says it cannot pull the image, check the package is public: your GitHub profile → **Packages** → `ops-copilot` → **Package settings**.
 
 ### Always on: Render
 
