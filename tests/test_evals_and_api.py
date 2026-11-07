@@ -136,20 +136,36 @@ def test_api_requires_the_access_token_when_one_is_set(local_tools, monkeypatch)
 
     from .fakes import ScriptedChatModel
 
-    monkeypatch.setattr(get_settings(), "api_token", SecretStr("s3cret"))
+    monkeypatch.setattr(get_settings(), "api_token", SecretStr("s3cret-token-16-chars"))
     monkeypatch.setattr(api.app.state, "graph", build_graph(ScriptedChatModel(), ScriptedChatModel(), local_tools), raising=False)
     client = TestClient(api.app)
     body = {"thread_id": "no-such-thread", "approved": True}
 
     assert client.post("/approve", json=body).status_code == 401
     assert client.post("/approve", json=body, headers={"Authorization": "Bearer wrong"}).status_code == 401
-    assert client.post("/approve", json=body, headers={"Authorization": "Bearer s3cret"}).status_code == 409  # past auth
+    assert client.post("/approve", json=body, headers={"Authorization": "Bearer s3cret-token-16-chars"}).status_code == 409  # past auth
 
     # what a host's health check and a first-time visitor need stays public
     health = client.get("/health")
     assert health.status_code == 200 and health.json()["auth_required"] is True
     page = client.get("/")
     assert page.status_code == 200 and "Ops Copilot" in page.text
+
+
+def test_api_rejects_oversized_message_and_thread_id(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from ops_copilot.api import main as api
+    from ops_copilot.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "api_token", None)
+    client = TestClient(api.app)  # validation runs before the handler, so no graph is needed
+
+    assert client.post("/chat", json={"message": "x" * (api.MAX_MESSAGE_CHARS + 1)}).status_code == 422
+    assert client.post("/chat", json={"message": "hi", "thread_id": "t" * 65}).status_code == 422
+    assert client.post("/triage", json={"alert": "x" * (api.MAX_MESSAGE_CHARS + 1)}).status_code == 422
+    assert client.post("/approve", json={"thread_id": "t" * 65, "approved": True}).status_code == 422
+    assert api.ChatRequest(message="x" * api.MAX_MESSAGE_CHARS, thread_id="t" * 64)  # the limits themselves pass
 
 
 def test_health_is_503_when_the_tool_servers_stop_answering(monkeypatch):

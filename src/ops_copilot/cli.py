@@ -200,11 +200,15 @@ def mcp(server: str = typer.Argument(..., help="knowledge | ops")) -> None:
 @app.command("mcp-config")
 def mcp_config() -> None:
     """Print a Claude Desktop / Claude Code mcpServers config block."""
-    from .mcp_client import mcp_server_config
+    from .mcp_client import SERVER_ENV_EXCLUDED, mcp_server_config
 
     cfg = {}
     for name, c in mcp_server_config().items():
-        env = {k: v for k, v in c["env"].items() if k.startswith("OPS_COPILOT_") or k == "VOYAGE_API_KEY"}
+        env = {
+            k: v
+            for k, v in c["env"].items()
+            if (k.startswith("OPS_COPILOT_") or k == "VOYAGE_API_KEY") and k not in SERVER_ENV_EXCLUDED
+        }
         cfg[name] = {"command": c["command"], "args": c["args"], **({"env": env} if env else {})}
     console.print_json(json.dumps({"mcpServers": cfg}))
 

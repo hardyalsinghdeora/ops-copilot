@@ -33,6 +33,11 @@ KNOWLEDGE_TOOL_NAMES = {"search_knowledge", "get_document", "list_documents"}
 OPS_TOOL_NAMES = {"get_service", "get_active_alerts", "list_recent_deployments", "search_tickets", "get_ticket", "draft_ticket"}
 
 
+# matches the OPS_COPILOT_ prefix but guards the HTTP API, which the tool servers never serve:
+# keep it out of their environment and out of the config `ops-copilot mcp-config` prints
+SERVER_ENV_EXCLUDED = frozenset({"OPS_COPILOT_API_TOKEN"})
+
+
 def _server_env() -> dict[str, str]:
     """MCP stdio clients start servers with a *minimal* environment on purpose (least
     privilege). Forward only what our servers need: settings, the embedding key, import path.
@@ -44,7 +49,7 @@ def _server_env() -> dict[str, str]:
     env = {
         k: v
         for k, v in os.environ.items()
-        if k in keep_exact or k.startswith(keep_prefixes)
+        if (k in keep_exact or k.startswith(keep_prefixes)) and k not in SERVER_ENV_EXCLUDED
     }
     # pin the data directory: a host such as Claude Desktop starts the server in its own cwd
     env.setdefault("OPS_COPILOT_ROOT", str(REPO_ROOT))

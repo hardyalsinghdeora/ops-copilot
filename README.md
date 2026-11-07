@@ -76,7 +76,7 @@ CI publishes the app as a Docker image, `ghcr.io/hardyalsinghdeora/ops-copilot`,
 
 1. On Hugging Face, create a **New Space**: SDK **Docker**, template **Blank**, hardware **CPU basic** (free).
 2. Put the two files from [`deploy/huggingface/`](deploy/huggingface) into the Space, replacing its `README.md` (**Files → Add file**, or push them with git).
-3. In the Space's **Settings → Variables and secrets**, add two secrets: `ANTHROPIC_API_KEY`, and `OPS_COPILOT_API_TOKEN` set to any long random string (the password you will paste into the page). For cheaper answers, also add the variable `OPS_COPILOT_MODEL_STRONG` = `claude-haiku-5-5`.
+3. In the Space's **Settings → Variables and secrets**, add two secrets: `ANTHROPIC_API_KEY`, and `OPS_COPILOT_API_TOKEN` set to a long random string, at least 16 characters (the password you will paste into the page). For cheaper answers, also add the variable `OPS_COPILOT_MODEL_STRONG` = `claude-haiku-5-5`.
 4. When the Space shows **Running**, open it, paste the token into the box at the top, and ask away.
 
 Free Spaces sleep after a while without visitors and wake on the next visit. To pick up a newer version after pushing to `main`, use **Settings → Factory rebuild**. If the Space build ever says it cannot pull the image, check the package is public: your GitHub profile → **Packages** → `ops-copilot` → **Package settings**.
@@ -98,7 +98,9 @@ The blueprint uses Render's 2 GB `standard` plan (paid); the 512 MB plans run ou
 docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... -e OPS_COPILOT_API_TOKEN=pick-a-long-secret ghcr.io/hardyalsinghdeora/ops-copilot
 ```
 
-The port comes from `PORT` when the platform sets it.
+The port comes from `PORT` when the platform sets it. The token must be at least 16 characters (the app refuses to start otherwise; an empty `OPS_COPILOT_API_TOKEN=` counts as unset). One way to make one: `python -c 'import secrets; print(secrets.token_urlsafe(32))'`.
+
+With Docker Compose (`docker compose up`), set `ANTHROPIC_API_KEY` and `OPS_COPILOT_API_TOKEN` in your shell or a `.env` next to `docker-compose.yml`: compose refuses to start without the token, and publishes the port on `127.0.0.1` only.
 
 Good to know, wherever it runs:
 

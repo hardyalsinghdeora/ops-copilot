@@ -13,6 +13,7 @@ from pathlib import Path
 from .models import Document
 
 _FRONT_MATTER = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+_COMMENT = re.compile(r"(?:^|\s)#.*$")  # YAML-style: "title: C# guide" keeps its "#"
 
 
 def parse_front_matter(raw: str) -> tuple[dict[str, str | list[str]], str]:
@@ -21,7 +22,7 @@ def parse_front_matter(raw: str) -> tuple[dict[str, str | list[str]], str]:
         return {}, raw
     meta: dict[str, str | list[str]] = {}
     for line in m.group(1).splitlines():
-        line = line.split("#", 1)[0].strip()  # strip trailing comments
+        line = _COMMENT.sub("", line).strip()  # a "#" starts a comment only at the start or after a space
         if not line or ":" not in line:
             continue
         key, value = line.split(":", 1)

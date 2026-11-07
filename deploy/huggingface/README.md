@@ -16,5 +16,5 @@ step before any ticket is filed.
 Needs two secrets in **Settings → Variables and secrets**:
 
 - `ANTHROPIC_API_KEY`: every question is billed to this key.
-- `OPS_COPILOT_API_TOKEN`: any long random string; paste it into the box at the top of the
+- `OPS_COPILOT_API_TOKEN`: a long random string (at least 16 characters); paste it into the box at the top of the
   page to use the app. Share it only with people you trust.

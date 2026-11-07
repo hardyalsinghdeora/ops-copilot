@@ -1,9 +1,13 @@
 services:
   ops-copilot:
     build: .
-    ports: ["8000:8000"]
+    # loopback only: reach it from this machine; put a reverse proxy in front to share it
+    ports: ["127.0.0.1:8000:8000"]
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # every request spends Anthropic credit, so compose refuses to start without a token
+      # (16+ characters, e.g. python -c 'import secrets; print(secrets.token_urlsafe(32))')
+      - OPS_COPILOT_API_TOKEN=${OPS_COPILOT_API_TOKEN:?set a token}
       - OPS_COPILOT_EMBEDDING_PROVIDER=local
     volumes:
       # a named volume keeps the image's ownership (the app runs as uid 1000); list the
