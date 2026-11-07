@@ -26,6 +26,17 @@ def test_front_matter_parses_scalars_and_lists():
     assert body.strip() == "body text"
 
 
+def test_front_matter_hash_is_a_comment_only_after_whitespace():
+    meta, _ = parse_front_matter(
+        "---\n# a full-line comment\ntitle: C# client guide  # trailing comment\nchannel: #ops-alerts\n"
+        "tags: [c#, f#]\n---\nbody\n"
+    )
+    assert meta["title"] == "C# client guide"
+    assert meta["tags"] == ["c#", "f#"]
+    assert meta["channel"] == ""  # YAML would read " #ops-alerts" as a comment too
+    assert not any(k.startswith("#") for k in meta)
+
+
 def test_knowledge_base_loads_with_unique_ids_and_required_fields():
     docs = load_knowledge_base(KB_DIR)
     assert len(docs) >= 20

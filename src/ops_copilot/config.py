@@ -11,7 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +34,8 @@ REPO_ROOT = project_root()
 
 EmbeddingProviderName = Literal["local", "voyage", "hashing"]
 
+MIN_API_TOKEN_LENGTH = 16
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -44,7 +46,7 @@ class Settings(BaseSettings):
     )
 
     # --- LLM -----------------------------------------------------------------
-    anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
+    anthropic_api_key: SecretStr | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     model_strong: str = "claude-sonnet-5-5"  # specialist agents
     model_fast: str = "claude-haiku-5-5"  # supervisor routing + reviewer/judge
     max_tokens: int = 2048
@@ -73,6 +75,27 @@ class Settings(BaseSettings):
     # PORT is what hosts such as Render set for the port they route traffic to
     api_port: int = Field(default=8000, validation_alias=AliasChoices("OPS_COPILOT_API_PORT", "PORT"))
     api_token: SecretStr | None = None  # when set, every API call needs "Authorization: Bearer <token>"
+
+    @field_validator("anthropic_api_key", "api_token", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, value: object) -> object:
+        # `OPS_COPILOT_API_TOKEN=` (as in a copied .env.example) must mean "no token", not
+        # SecretStr("") - an empty token would otherwise be treated as configured
+        if isinstance(value, SecretStr):
+            value = value.get_secret_value()
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("api_token")
+    @classmethod
+    def _token_long_enough(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and len(value.get_secret_value()) < MIN_API_TOKEN_LENGTH:
+            raise ValueError(
+                f"OPS_COPILOT_API_TOKEN is too short ({len(value.get_secret_value())} characters); use at least "
+                f"{MIN_API_TOKEN_LENGTH}, e.g. python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+        return value
 
     @property
     def chroma_dir(self) -> Path:

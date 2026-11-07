@@ -63,25 +63,33 @@ async def require_token(credentials: Annotated[HTTPAuthorizationCredentials | No
 protected = [Depends(require_token)]
 
 
+# caps on what a caller can make the agents read (and spend tokens on) per request
+MAX_MESSAGE_CHARS = 4000
+MAX_THREAD_ID_CHARS = 64  # a uuid4 is 36
+
+Message = Annotated[str, Field(min_length=1, max_length=MAX_MESSAGE_CHARS)]
+ThreadId = Annotated[str, Field(min_length=1, max_length=MAX_THREAD_ID_CHARS)]
+
+
 class ChatRequest(BaseModel):
-    message: str
-    thread_id: str | None = None
+    message: Message
+    thread_id: ThreadId | None = None
     route: Literal["knowledge", "triage", "release_notes"] | None = None
 
 
 class TriageRequest(BaseModel):
-    alert: str
-    thread_id: str | None = None
+    alert: Message
+    thread_id: ThreadId | None = None
 
 
 class ReleaseNotesRequest(BaseModel):
-    version: str
+    version: str = Field(min_length=1, max_length=32)
 
 
 class ApproveRequest(BaseModel):
-    thread_id: str
+    thread_id: ThreadId
     approved: bool
-    comment: str = ""
+    comment: str = Field(default="", max_length=MAX_MESSAGE_CHARS)
 
 
 class CopilotResponse(BaseModel):

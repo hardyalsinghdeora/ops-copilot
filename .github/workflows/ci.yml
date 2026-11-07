@@ -50,7 +50,7 @@ jobs:
         # neither of which calls the Anthropic API
         run: |
           docker run -d --name copilot -p 8000:10000 -e PORT=10000 \
-            -e ANTHROPIC_API_KEY=ci-placeholder -e OPS_COPILOT_API_TOKEN=ci-token ops-copilot:ci
+            -e ANTHROPIC_API_KEY=ci-placeholder -e OPS_COPILOT_API_TOKEN=ci-token-at-least-16-chars ops-copilot:ci
           for _ in $(seq 1 30); do
             if curl -fsS http://localhost:8000/health > health.json; then break; fi
             sleep 2

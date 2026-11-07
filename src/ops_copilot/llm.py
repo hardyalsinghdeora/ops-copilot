@@ -35,7 +35,7 @@ def get_llm(role: Role = "strong") -> BaseChatModel:
     model = s.model_strong if role == "strong" else s.model_fast
     return ChatAnthropic(
         model=model,
-        api_key=s.anthropic_api_key,
+        api_key=s.anthropic_api_key.get_secret_value(),
         max_tokens=s.max_tokens,
         temperature=s.temperature,
     )

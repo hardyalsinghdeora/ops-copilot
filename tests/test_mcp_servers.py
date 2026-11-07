@@ -86,8 +86,10 @@ def test_mcp_servers_do_not_receive_the_anthropic_key(monkeypatch):
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     monkeypatch.setenv("VOYAGE_API_KEY", "pa-test")
+    monkeypatch.setenv("OPS_COPILOT_API_TOKEN", "api-token-for-the-http-api")
     for server in mcp_server_config().values():
         assert "ANTHROPIC_API_KEY" not in server["env"]
+        assert "OPS_COPILOT_API_TOKEN" not in server["env"]  # guards the HTTP API, not the tool servers
         assert server["env"]["VOYAGE_API_KEY"] == "pa-test"  # the knowledge server may embed with Voyage
         assert server["env"]["OPS_COPILOT_ROOT"]  # servers find data/ whatever cwd the host uses
 

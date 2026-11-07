@@ -81,7 +81,7 @@ def test_missing_api_key_is_one_clear_line(monkeypatch):
     assert "ANTHROPIC_API_KEY is not set" in result.output and "Traceback" not in result.output
 
 
-def test_ingest_eval_and_mcp_config(tmp_path):
+def test_ingest_eval_and_mcp_config(tmp_path, monkeypatch):
     assert runner.invoke(cli.app, ["ingest"]).exit_code == 0
 
     report_path = tmp_path / "report.json"
@@ -90,7 +90,9 @@ def test_ingest_eval_and_mcp_config(tmp_path):
     report = json.loads(report_path.read_text())
     assert {"hybrid", "bm25", "vector"} == set(report["compare"])
 
+    monkeypatch.setenv("OPS_COPILOT_API_TOKEN", "api-token-for-the-http-api")
     result = runner.invoke(cli.app, ["mcp-config"])
     servers = json.loads(result.output)["mcpServers"]
     assert set(servers) == {"knowledge", "ops"}
     assert all("ANTHROPIC_API_KEY" not in s.get("env", {}) for s in servers.values())
+    assert "api-token-for-the-http-api" not in result.output
